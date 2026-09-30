@@ -1,0 +1,29 @@
+import { describe, expect, it } from "vitest";
+import { calculateRating } from "../src/rating/rating";
+
+describe("calculateRating", () => {
+  it.each([
+    { score: 95_000_000n, expected: 120 },
+    { score: 98_000_000n, expected: 130 },
+    { score: 99_000_000n, expected: 135 },
+    { score: 100_000_000n, expected: 140 },
+    { score: 120_000_000n, expected: 140 },
+  ])("maps score $score with constant 12 to $expected", ({ score, expected }) => {
+    expect(calculateRating(12, score)).toBe(expected);
+  });
+
+  it("does not let low scores produce a negative Rating", () => {
+    expect(calculateRating(12, 0n)).toBe(0);
+    expect(calculateRating(0, 94_000_000n)).toBe(0);
+  });
+
+  it("preserves fractional constants and does not round during calculation", () => {
+    expect(calculateRating(12.5, 99_000_000n)).toBe(140);
+    expect(calculateRating(12.5, 98_500_000n)).toBe(137.5);
+  });
+
+  it("rejects negative scores and invalid constants", () => {
+    expect(() => calculateRating(12, -1n)).toThrow(RangeError);
+    expect(() => calculateRating(Number.NaN, 100_000_000n)).toThrow(RangeError);
+  });
+});

@@ -1,0 +1,49 @@
+# Dependencies and generated output
+node_modules/
+dist/
+coverage/
+.vite/
+.vitest/
+build/
+output/
+artifacts/
+extracted/
+
+# Private data and scratch work
+.local/
+fixtures-private/
+tmp/
+*.sav
+*.spc
+*.assetbundle
+*.bundle
+*.assets
+*.bank
+*.wem
+*.ogg
+*.wav
+*.mp3
+*.mp4
+*.webm
+*.jpg
+*.jpeg
+*.png
+save_export.json
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+.secrets/
+
+# Operating system/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

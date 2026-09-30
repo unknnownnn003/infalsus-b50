@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f6f8" />
+    <meta name="description" content="在浏览器本地解析 In Falsus 存档并计算 Best 50。" />
+    <title>In Falsus B50</title>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="page-header">
+        <p class="eyebrow">本地成绩分析工具</p>
+        <h1>In Falsus B50</h1>
+        <p class="intro">选择存档，核对成绩解析、谱面匹配与 Rating 排名。</p>
+      </header>
+
+      <section class="panel import-panel" aria-labelledby="import-title">
+        <h2 id="import-title">导入存档</h2>
+        <div id="drop-zone" class="drop-zone" aria-describedby="privacy-note">
+          <p class="drop-title">选择或拖入 <code>savestate_V3.sav</code></p>
+          <p class="drop-help">文件只在本地读取；不会保存到网页或上传。</p>
+          <button id="browse-button" class="button button-primary" type="button">选择 .sav 文件</button>
+          <input id="file-input" type="file" accept=".sav,application/octet-stream" hidden />
+        </div>
+        <p id="privacy-note" class="privacy-note">你的存档只在当前浏览器中解析，不会上传至任何服务器。</p>
+        <p id="status" class="status" role="status" aria-live="polite">等待选择存档。</p>
+      </section>
+
+      <section id="results" class="results" aria-labelledby="results-title" hidden>
+        <div class="results-heading">
+          <div>
+            <p class="eyebrow">解析摘要</p>
+            <h2 id="results-title">B50 结果</h2>
+          </div>
+          <button id="export-button" class="button" type="button" disabled>导出 B50 JSON</button>
+        </div>
+
+        <div class="stats-grid" aria-label="成绩匹配统计">
+          <div class="stat"><span>解析成绩</span><strong id="parsed-count">0</strong></div>
+          <div class="stat"><span>成功匹配谱面</span><strong id="matched-count">0</strong></div>
+          <div class="stat"><span>未匹配</span><strong id="unmatched-count">0</strong></div>
+          <div class="stat"><span>B50 数量</span><strong id="b50-count">0</strong></div>
+          <div class="stat stat-emphasis"><span>Average Rating</span><strong id="average-rating">0.00</strong></div>
+          <div class="stat stat-emphasis"><span>Total Rating</span><strong id="total-rating">0.00</strong></div>
+        </div>
+
+        <div id="diagnostics" class="diagnostics" hidden>
+          <h3>未匹配成绩</h3>
+          <p>当前 catalog 没有这些谱面的 metadata；这些记录未参与 Rating 排序。</p>
+          <ul id="diagnostic-list"></ul>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Rank</th>
+                <th scope="col">Song</th>
+                <th scope="col">Difficulty</th>
+                <th scope="col">Constant</th>
+                <th scope="col">Score</th>
+                <th scope="col">Rating</th>
+                <th scope="col">Chart ID</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="page-footer">
+        <p>第一阶段：验证存档到 B50 的数据链。正式分享图片尚未实现。</p>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

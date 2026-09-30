@@ -3,76 +3,152 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f5f6f8" />
-    <meta name="description" content="在浏览器本地解析 In Falsus 存档并计算 Best 50。" />
-    <title>In Falsus B50</title>
+    <meta name="theme-color" content="#111015" />
+    <meta name="description" content="在浏览器本地解析 In Falsus 存档，查看 Best 50 并导出 PNG。" />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <title>In Falsus · Best 50</title>
   </head>
   <body>
-    <main class="page-shell">
-      <header class="page-header">
-        <p class="eyebrow">本地成绩分析工具</p>
-        <h1>In Falsus B50</h1>
-        <p class="intro">选择存档，核对成绩解析、谱面匹配与 Rating 排名。</p>
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="brand-name">IN FALSUS</span>
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="brand-caption">PLAYER ARCHIVE</span>
+        </div>
+        <div class="local-badge"><span class="local-dot" aria-hidden="true"></span>本地处理</div>
       </header>
 
-      <section class="panel import-panel" aria-labelledby="import-title">
-        <h2 id="import-title">导入存档</h2>
-        <div id="drop-zone" class="drop-zone" aria-describedby="privacy-note">
-          <p class="drop-title">选择或拖入 <code>savestate_V3.sav</code></p>
-          <p class="drop-help">文件只在本地读取；不会保存到网页或上传。</p>
-          <button id="browse-button" class="button button-primary" type="button">选择 .sav 文件</button>
-          <input id="file-input" type="file" accept=".sav,application/octet-stream" hidden />
-        </div>
-        <p id="privacy-note" class="privacy-note">你的存档只在当前浏览器中解析，不会上传至任何服务器。</p>
-        <p id="status" class="status" role="status" aria-live="polite">等待选择存档。</p>
-      </section>
-
-      <section id="results" class="results" aria-labelledby="results-title" hidden>
-        <div class="results-heading">
-          <div>
-            <p class="eyebrow">解析摘要</p>
-            <h2 id="results-title">B50 结果</h2>
+      <main>
+        <section class="hero" aria-labelledby="page-title">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="eyebrow-mark"></span>PERSONAL SCORE ARCHIVE</p>
+            <h1 id="page-title"><span>IN FALSUS</span><strong>BEST 50</strong></h1>
+            <p class="hero-subtitle">把最好的 50 次演奏，排成一页。</p>
           </div>
-          <button id="export-button" class="button" type="button" disabled>导出 B50 JSON</button>
-        </div>
+          <div class="hero-index" aria-hidden="true">
+            <strong>50</strong>
+            <span>BEST<br />CHARTS</span>
+            <div class="index-bars"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </section>
 
-        <div class="stats-grid" aria-label="成绩匹配统计">
-          <div class="stat"><span>解析成绩</span><strong id="parsed-count">0</strong></div>
-          <div class="stat"><span>成功匹配谱面</span><strong id="matched-count">0</strong></div>
-          <div class="stat"><span>未匹配</span><strong id="unmatched-count">0</strong></div>
-          <div class="stat"><span>B50 数量</span><strong id="b50-count">0</strong></div>
-          <div class="stat stat-emphasis"><span>Average Rating</span><strong id="average-rating">0.00</strong></div>
-          <div class="stat stat-emphasis"><span>Total Rating</span><strong id="total-rating">0.00</strong></div>
-        </div>
+        <section class="import-panel" aria-labelledby="import-title">
+          <div class="section-heading">
+            <div class="section-number">01</div>
+            <div>
+              <p class="section-kicker">LOCAL SAVE READER</p>
+              <h2 id="import-title">载入成绩</h2>
+            </div>
+          </div>
+          <div id="drop-zone" class="drop-zone" aria-describedby="privacy-note">
+            <div class="drop-copy">
+              <span class="drop-symbol" aria-hidden="true">+</span>
+              <div>
+                <p class="drop-title">选择或拖入 <code>savestate_V3.sav</code></p>
+                <p class="drop-help">存档在此设备的浏览器内读取，生成你的个人 B50。</p>
+              </div>
+            </div>
+            <button id="browse-button" class="button button-primary" type="button">
+              <span>选择存档</span><span class="button-arrow" aria-hidden="true">↗</span>
+            </button>
+            <input id="file-input" type="file" accept=".sav,application/octet-stream" hidden />
+          </div>
+          <div class="import-foot">
+            <p id="privacy-note" class="privacy-note"><span class="privacy-lock" aria-hidden="true">◆</span>存档仅在当前浏览器本地解析，不会上传至服务器。</p>
+            <p id="status" class="status" role="status" aria-live="polite">等待选择存档。</p>
+          </div>
+        </section>
 
-        <div id="diagnostics" class="diagnostics" hidden>
-          <h3>未匹配成绩</h3>
-          <p>当前 catalog 没有这些谱面的 metadata；这些记录未参与 Rating 排序。</p>
-          <ul id="diagnostic-list"></ul>
-        </div>
+        <section id="results" class="results" aria-labelledby="results-title" hidden>
+          <div class="results-heading">
+            <div class="section-heading">
+              <div class="section-number">02</div>
+              <div>
+                <p class="section-kicker">YOUR PERSONAL RECORD</p>
+                <h2 id="results-title">最佳成绩 <span class="result-count"><span id="b50-count">0</span><span>/50</span></span></h2>
+              </div>
+            </div>
+            <div class="result-controls">
+              <label class="name-field" for="player-name">
+                <span>图片显示名称 <small>可选</small></span>
+                <input id="player-name" type="text" maxlength="32" autocomplete="off" placeholder="仅用于本次导出" />
+              </label>
+              <div class="export-actions">
+                <button id="export-png-button" class="button button-primary" type="button" disabled>
+                  <span>导出 PNG</span><span class="button-arrow" aria-hidden="true">↓</span>
+                </button>
+                <button id="export-json-button" class="button button-secondary" type="button" disabled>导出 JSON</button>
+                <a id="png-download-link" class="button button-download" href="#" download="in-falsus-b50.png" hidden>
+                  <span>保存 PNG</span><span class="button-arrow" aria-hidden="true">↓</span>
+                </a>
+              </div>
+            </div>
+          </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Rank</th>
-                <th scope="col">Song</th>
-                <th scope="col">Difficulty</th>
-                <th scope="col">Constant</th>
-                <th scope="col">Score</th>
-                <th scope="col">Rating</th>
-                <th scope="col">Chart ID</th>
-              </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-          </table>
-        </div>
-      </section>
+          <div class="stats-band" aria-label="B50 与存档统计">
+            <div class="stat stat-primary">
+              <span class="stat-label">B50 AVERAGE RATING</span>
+              <strong id="average-rating">0.00</strong>
+            </div>
+            <div class="stat stat-total">
+              <span class="stat-label">B50 TOTAL RATING</span>
+              <strong id="total-rating">0.00</strong>
+            </div>
+            <div class="stat">
+              <span class="stat-label">PARSED CHARTS</span>
+              <strong id="parsed-count">0</strong>
+            </div>
+            <div class="stat">
+              <span class="stat-label">MATCHED CHARTS</span>
+              <strong id="matched-count">0</strong>
+            </div>
+          </div>
 
-      <footer class="page-footer">
-        <p>第一阶段：验证存档到 B50 的数据链。正式分享图片尚未实现。</p>
+          <div class="cards-heading">
+            <h3><span class="heading-slash">/</span> RANKED CHARTS</h3>
+            <p>按 Rating 排序 <span aria-hidden="true">·</span> TOP 50</p>
+          </div>
+          <div id="b50-cards" class="b50-grid" role="list" aria-label="B50 排名成绩"></div>
+
+          <p id="export-status" class="export-status" role="status" aria-live="polite"></p>
+
+          <details class="details-panel">
+            <summary>
+              <span>详细成绩与诊断</span>
+              <span class="details-summary-meta"><span id="unmatched-count">0</span> 条未匹配 <span class="details-toggle" aria-hidden="true">+</span></span>
+            </summary>
+            <div id="diagnostics" class="diagnostics" hidden>
+              <h3>未匹配成绩</h3>
+              <p>当前 catalog 没有这些谱面的 metadata；这些记录不会获得猜测的定数，也不会参与 B50。</p>
+              <ul id="diagnostic-list"></ul>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Rank</th>
+                    <th scope="col">Song</th>
+                    <th scope="col">Difficulty</th>
+                    <th scope="col">Constant</th>
+                    <th scope="col">Score</th>
+                    <th scope="col">Rating</th>
+                    <th scope="col">Chart ID</th>
+                  </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-brand"><span class="footer-mark" aria-hidden="true">IF</span><span>IN FALSUS / BEST 50</span></div>
+        <p>本地解析 · 无上传 · 无账户 · 无遥测</p>
       </footer>
-    </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

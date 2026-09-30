@@ -1,49 +1,57 @@
 import { describe, expect, it } from "vitest";
 import { createCatalog, loadCatalog } from "../src/catalog/loader";
 import { CatalogError } from "../src/catalog/errors";
-import type { ChartMetadata } from "../src/catalog/types";
 
-const firstChart: ChartMetadata = {
-  songId: 2,
-  difficultyIndex: 0,
-  chartId: "alamode0",
-  baseName: "alamode",
-  title: "alamode",
-  difficulty: "Hard",
-  constant: 1,
-};
+function songList(songs: unknown[]): unknown {
+  return { schemaVersion: 1, songs };
+}
 
-function snapshot(charts: ChartMetadata[], schemaVersion = 1): unknown {
-  return { schemaVersion, catalogVersion: "test", charts };
+function chart(overrides: Record<string, unknown> = {}) {
+  return { difficultyIndex: 0, difficulty: "MIN", chartId: "alamode0", available: true, rating: 1, ...overrides };
+}
+
+function song(overrides: Record<string, unknown> = {}) {
+  return { songId: 2, baseName: "alamode", title: "à la mode", charts: [chart()], ...overrides };
 }
 
 describe("catalog", () => {
-  it("resolves by save identity and by chartId", () => {
-    const catalog = createCatalog(snapshot([firstChart]));
-    expect(catalog.resolveBySaveRecord(2, 0)).toEqual(firstChart);
-    expect(catalog.resolveByChartId("alamode0")).toEqual(firstChart);
+  it("resolves by save identity and chartId", () => {
+    const catalog = createCatalog(songList([song()]));
+    expect(catalog.resolveBySaveRecord(2, 0)).toMatchObject({ chartId: "alamode0", constant: 1 });
+    expect(catalog.resolveByChartId("alamode0")?.difficultyIndex).toBe(0);
     expect(catalog.resolveBySaveRecord(2, 3)).toBeNull();
-    expect(catalog.resolveByChartId("missing")).toBeNull();
   });
 
-  it("loads the bundled, attributed 283-chart snapshot", () => {
-    const bundled = loadCatalog();
-    expect(bundled.charts).toHaveLength(283);
-    expect(bundled.catalogVersion).toBe("infalsus-resource-dd2ae9621321");
-    expect(bundled.resolveBySaveRecord(2, 0)?.chartId).toBe("alamode0");
+  it("loads all available game charts and excludes unavailable tutorials", () => {
+    const catalog = loadCatalog();
+    expect(catalog.charts).toHaveLength(300);
+    expect(catalog.catalogVersion).toMatch(/^game-[a-f0-9]{12}$/u);
+    expect(catalog.resolveBySaveRecord(11, 3)?.chartId).toBe("cryogenic3");
+    expect(catalog.resolveBySaveRecord(67, 3)?.chartId).toBe("deepintothevibe3");
+    expect(catalog.resolveByChartId("tutorialmin0")).toBeNull();
   });
 
-  it("rejects unsupported schema versions", () => {
-    expect(() => createCatalog(snapshot([firstChart], 2))).toThrowError(CatalogError);
+  it("keeps Rating and display level separate", () => {
+    const catalog = createCatalog(songList([song({ charts: [chart({ rating: 12, levelIndicator: "15" })] })]));
+    expect(catalog.resolveBySaveRecord(2, 0)).toMatchObject({ constant: 12, levelIndicator: "15" });
   });
 
-  it("rejects duplicate identities", () => {
-    const second = { ...firstChart, chartId: "different-chart", title: "other" };
-    expect(() => createCatalog(snapshot([firstChart, second]))).toThrowError(/Duplicate chart identity/);
+  it("rejects an unsupported schema", () => {
+    expect(() => createCatalog({ schemaVersion: 2, songs: [] })).toThrowError(CatalogError);
   });
 
-  it("rejects duplicate chart IDs", () => {
-    const second = { ...firstChart, songId: 3, chartId: firstChart.chartId };
-    expect(() => createCatalog(snapshot([firstChart, second]))).toThrowError(/Duplicate chartId/);
+  it("allows missing jackets for renderer fallback", () => {
+    expect(createCatalog(songList([song()])).resolveBySaveRecord(2, 0)?.jacket).toBeUndefined();
+  });
+
+  it("rejects unsafe jacket paths", () => {
+    for (const jacket of ["https://example.invalid/a.webp", "../a.webp", "/assets/jackets/a.webp", "assets/jackets/a.png"]) {
+      expect(() => createCatalog(songList([song({ jacket })]))).toThrowError(/assets\/jackets\/\*\.webp/u);
+    }
+  });
+
+  it("rejects duplicate identity even when unavailable", () => {
+    expect(() => createCatalog(songList([song({ charts: [chart({ available: false }), chart({ chartId: "x", available: false })] })])))
+      .toThrowError(/Duplicate chart identity/u);
   });
 });

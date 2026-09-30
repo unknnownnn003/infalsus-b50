@@ -1,64 +1,13 @@
-import bundledSnapshot from "./catalog.json";
+import bundledSnapshot from "./songlist.json";
 import { CatalogError } from "./errors";
 import { createCatalogIndex } from "./resolver";
 import type { CatalogIndex, ChartMetadata } from "./types";
+import { normalizeGameSongList } from "../../scripts/game-catalog.mjs";
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function requiredString(value: unknown, field: string, index: number): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new CatalogError("invalid-catalog", `charts[${index}].${field} must be a non-empty string.`);
-  }
-  return value;
-}
-
-function optionalString(chart: Record<string, unknown>, field: string, index: number): string | undefined {
-  const value = chart[field];
-  if (value === undefined) return undefined;
-  if (typeof value !== "string") {
-    throw new CatalogError("invalid-catalog", `charts[${index}].${field} must be a string when provided.`);
-  }
-  return value;
-}
-
-function parseChart(value: unknown, index: number): ChartMetadata {
-  if (!isRecord(value)) {
-    throw new CatalogError("invalid-catalog", `charts[${index}] must be an object.`);
-  }
-
-  const songId = value["songId"];
-  const difficultyIndex = value["difficultyIndex"];
-  const constant = value["constant"];
-  if (!Number.isInteger(songId) || (songId as number) < 0 || (songId as number) > 0xffff) {
-    throw new CatalogError("invalid-catalog", `charts[${index}].songId must be a u16 integer.`);
-  }
-  if (!Number.isInteger(difficultyIndex) || (difficultyIndex as number) < 0 || (difficultyIndex as number) > 3) {
-    throw new CatalogError("invalid-catalog", `charts[${index}].difficultyIndex must be an integer from 0 through 3.`);
-  }
-  if (typeof constant !== "number" || !Number.isFinite(constant) || constant < 0) {
-    throw new CatalogError("invalid-catalog", `charts[${index}].constant must be a finite non-negative number.`);
-  }
-
-  const artist = optionalString(value, "artist", index);
-  const designer = optionalString(value, "designer", index);
-  const jacket = optionalString(value, "jacket", index);
-
-  return {
-    songId: songId as number,
-    difficultyIndex: difficultyIndex as number,
-    chartId: requiredString(value["chartId"], "chartId", index),
-    baseName: requiredString(value["baseName"], "baseName", index),
-    title: requiredString(value["title"], "title", index),
-    difficulty: requiredString(value["difficulty"], "difficulty", index),
-    constant,
-    ...(artist === undefined ? {} : { artist }),
-    ...(designer === undefined ? {} : { designer }),
-    ...(jacket === undefined ? {} : { jacket }),
-  };
 }
 
 export function createCatalog(snapshot: unknown): CatalogIndex {
@@ -73,28 +22,40 @@ export function createCatalog(snapshot: unknown): CatalogIndex {
       `Unsupported catalog schemaVersion: ${String(schemaVersion)}.`,
     );
   }
-  const catalogVersion = snapshot["catalogVersion"];
-  if (typeof catalogVersion !== "string" || catalogVersion.trim().length === 0) {
-    throw new CatalogError("invalid-catalog", "catalogVersion must be a non-empty string.");
-  }
-  const chartRows = snapshot["charts"];
-  if (!Array.isArray(chartRows)) {
-    throw new CatalogError("invalid-catalog", "charts must be an array.");
+  let songList;
+  try {
+    songList = normalizeGameSongList(snapshot).songList;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Game songlist is malformed.";
+    const code = message.startsWith("Duplicate chart identity")
+      ? "duplicate-identity"
+      : message.startsWith("Duplicate chartId")
+        ? "duplicate-chart-id"
+        : "invalid-catalog";
+    throw new CatalogError(code, message);
   }
 
-  const charts = chartRows.map(parseChart);
-  const identities = new Set<string>();
-  const chartIds = new Set<string>();
-  for (const chart of charts) {
-    const key = `${chart.songId}:${chart.difficultyIndex}`;
-    if (identities.has(key)) {
-      throw new CatalogError("duplicate-identity", `Duplicate chart identity ${key}.`);
+  const fingerprint = songList.source?.fingerprint;
+  const catalogVersion = fingerprint === undefined ? "game-songlist-v1" : "game-" + fingerprint.slice(0, 12);
+  const charts: ChartMetadata[] = [];
+  for (const song of songList.songs) {
+    for (const chart of song.charts) {
+      if (!chart.available) continue;
+      const jacketPath = chart.jacket ?? song.jacket;
+      charts.push({
+        songId: song.songId,
+        difficultyIndex: chart.difficultyIndex,
+        chartId: chart.chartId,
+        baseName: song.baseName,
+        title: song.title,
+        difficulty: chart.difficulty,
+        constant: chart.rating,
+        ...(chart.levelIndicator === undefined ? {} : { levelIndicator: chart.levelIndicator }),
+        ...(chart.designer === undefined ? {} : { designer: chart.designer }),
+        ...(song.artist === undefined ? {} : { artist: song.artist }),
+        ...(jacketPath === undefined ? {} : { jacket: { thumbnail: jacketPath } }),
+      });
     }
-    if (chartIds.has(chart.chartId)) {
-      throw new CatalogError("duplicate-chart-id", `Duplicate chartId ${chart.chartId}.`);
-    }
-    identities.add(key);
-    chartIds.add(chart.chartId);
   }
 
   return createCatalogIndex(SUPPORTED_SCHEMA_VERSION, catalogVersion, charts);

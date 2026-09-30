@@ -10,14 +10,43 @@ export interface ChartMetadata extends ChartIdentity {
   artist?: string;
   difficulty: string;
   constant: number;
+  levelIndicator?: string;
+  designer?: string;
+  jacket?: {
+    thumbnail: string;
+  };
+}
+
+export interface InFalsusChartSource {
+  difficultyIndex: number;
+  difficulty: string;
+  chartId: string;
+  available: boolean;
+  rating: number;
+  levelIndicator?: string;
   designer?: string;
   jacket?: string;
 }
 
-export interface CatalogSnapshot {
-  schemaVersion: number;
-  catalogVersion: string;
-  charts: ChartMetadata[];
+export interface InFalsusSongSource {
+  songId: number;
+  baseName: string;
+  title: string;
+  artist?: string;
+  jacket?: string;
+  charts: InFalsusChartSource[];
+}
+
+export interface InFalsusSongList {
+  schemaVersion: 1;
+  source?: {
+    gameVersion?: string;
+    gameDataCommitId?: string;
+    steamBuildId?: string;
+    addressablesVersion?: string;
+    fingerprint?: string;
+  };
+  songs: InFalsusSongSource[];
 }
 
 export interface CatalogIndex {

@@ -5,16 +5,28 @@
 - This is a pure-front-end In Falsus B50 tool intended for GitHub Pages.
 - Save files are processed only in the user's browser. Never upload save files or send them to any server or remote API.
 - Do not create a backend.
-- Do not maintain a second independent source of In Falsus song/chart facts. Rhythm Archive is the future canonical metadata source.
-- This project owns player score data and Rating/B50 calculation only; it does not extract game resources.
-- Keep runtime independent of Rhythm Archive availability. Share catalog data at development/build time, not through a required runtime fetch.
+- The current local In Falsus installation is the primary maintenance-time source for song/chart metadata and jacket thumbnails. Treat the installation as strictly read-only.
+- B50 owns player score data, catalog normalization, and Rating/B50 calculation. It does not extract chart payloads or game resources beyond the metadata and jacket thumbnail inputs needed by B50.
+- Rhythm Archive is a cross-check and a related-project contract, not a runtime or correctness dependency.
+- Keep runtime independent of both the game installation and Rhythm Archive. Commit a compact generated snapshot and static thumbnails.
 
 ## Data boundaries
 
-- Cross-project chart identity is `songId + difficultyIndex ↔ chartId`, with `chartId` used by chart-preview tooling.
-- Save parsing must read only the fields needed by current features. Do not copy or port a full save parser without demonstrated need.
+- Cross-project chart identity is `songId + difficultyIndex ↔ chartId`; `chartId` is used by chart-preview tooling.
+- Save parsing reads only the fields needed by current features. Do not copy or port a full save parser without demonstrated need.
+- Keep source `Rating` and `LevelSectionIndicator` as separate fields. The B50 adapter maps `Rating` to the existing formula constant; the display level never changes calculation.
+- Preserve `available` from game data. The runtime B50 resolver indexes available charts only; unavailable/tutorial metadata can remain in the generated snapshot for diagnostics.
 - Treat upstream findings as confirmed facts, inference, or project conventions; never present inference as verified game behavior.
-- Fail closed on malformed, unsupported, or ambiguous save formats. Do not emit guessed scores.
+- Fail closed on malformed, unsupported, or ambiguous save/catalog formats. Do not emit guessed scores or metadata.
+
+## Read-only game extraction
+
+- Default source: the user's installed In Falsus game directory. Open files for reading only; do not change content, attributes, timestamps, Steam files, or saves.
+- On Windows, check that the NTFS Last Access Time policy is disabled and has been active since system boot before reading game files. The extractor refuses when updates are enabled, the policy changed after boot, or the state cannot be verified; it never changes Windows settings.
+- Never create files, caches, unpacked output, or temporary images inside the game directory.
+- Use only `.local/game-catalog/` as temporary extractor output and remove it when a run finishes. The committed outputs are `src/catalog/songlist.json` and 320×320 WebP jackets under `public/assets/jackets/`.
+- Do not extract or commit `.spc`, audio/video, original textures/images, AssetBundles, fonts, UI assets, character artwork, or other game resources.
+- Do not add a semantic game version from guesswork. Record only identifiers read from the installation, such as `SongData.CommitId`, an installed Steam build ID, and a content-derived fingerprint.
 
 ## Repository hygiene
 
@@ -24,10 +36,10 @@
 
 ## Engineering practices
 
-- Keep parser, catalog source/loader, rating/B50 logic, and UI in separate modules.
+- Keep parser, generated catalog source/loader, rating/B50 logic, and UI in separate modules.
 - Core algorithms must not depend on browser DOM APIs.
 - Keep TypeScript strict and preserve explicit, testable data contracts.
-- Phase acceptance relies on relevant automated tests, typecheck, production build, necessary real-data validation, durable README/docs updates where needed, and a milestone Git commit with a clean working tree. Do not require a separate process log.
+- Phase acceptance relies on relevant automated tests, typecheck, production build, necessary real-data validation, durable README/docs updates, and a milestone Git commit with a clean working tree. Do not require a separate process log.
 - Avoid full test/build runs after tiny edits. Run relevant checks during module work and the complete project gate at the end of a phase.
-- Commit only at a clear milestone, not after every small change.
-- Do not commit original game assets or large jackets; future thumbnails should come from Rhythm Archive.
+- Keep the Save parser, Rating formula, and B50 sort semantics frozen unless new evidence proves a bug.
+- Do not commit original game assets or large jackets; use generated 320×320 WebP thumbnails only.

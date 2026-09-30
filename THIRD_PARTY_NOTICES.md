@@ -4,7 +4,7 @@
 
 Repositories: <https://github.com/REDDRAGON-HL/InFalsus-SaveData-Parser> and <https://github.com/REDDRAGON-HL/InFalsus-Resource>
 
-The upstream repositories declare the MIT License. Their public `songs.json` data supplies the compact chart snapshot in this project; the score parser is independently implemented in TypeScript using the upstream format as a structural reference. No upstream Python source is copied.
+These repositories declare the MIT License. Their save-format and game-metadata implementations are references for the focused B50 parser and maintenance extractor. No upstream parser or resource-extraction source file is vendored into the browser runtime. The generated songlist is extracted from the current local installation; it is not the upstream `songs.json` snapshot.
 
 The upstream `LICENSE` files contain the following notice:
 
@@ -32,4 +32,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-The snapshot contains metadata only, not original game assets. It is runtime data, not an independent long-term curation effort; Rhythm Archive is the planned canonical metadata source.
+## Maintenance-only image libraries
+
+The optional local catalog extractor uses [UnityPy](https://github.com/K0lb3/UnityPy) under MIT and [Pillow](https://github.com/python-pillow/Pillow) under MIT-CMU. Neither dependency is bundled into the browser app. Versions used by the current extractor are pinned in `scripts/requirements-game-catalog.txt`.
+
+## Game content
+
+The local extractor reads the installed game and emits only small 320×320 WebP jacket derivatives required by B50. It does not redistribute original AssetBundles, textures, chart payloads, audio, or video. In Falsus names and jacket artwork remain the property of their respective rights holders; inclusion of a small preview does not grant a license to reuse it elsewhere. This is an unofficial community tool and is not affiliated with the rights holders.

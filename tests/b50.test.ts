@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createCatalog } from "../src/catalog/loader";
 import type { ChartMetadata } from "../src/catalog/types";
 import { buildB50 } from "../src/rating/b50";
 import { scoreRecord } from "./helpers/synthetic-save";
+import { createTestCatalog } from "./helpers/catalog";
 
 function chart(songId: number, difficultyIndex = 0, constant = 12): ChartMetadata {
   return {
@@ -11,13 +11,13 @@ function chart(songId: number, difficultyIndex = 0, constant = 12): ChartMetadat
     chartId: `song-${songId}-${difficultyIndex}`,
     baseName: `song-${songId}`,
     title: `Song ${songId}`,
-    difficulty: ["Hard", "Expert", "Extreme", "Special"][difficultyIndex]!,
+    difficulty: ["MIN", "EVO", "ULT", "FBD"][difficultyIndex]!,
     constant,
   };
 }
 
 function catalog(charts: ChartMetadata[]) {
-  return createCatalog({ schemaVersion: 1, catalogVersion: "test", charts });
+  return createTestCatalog(charts);
 }
 
 describe("buildB50", () => {

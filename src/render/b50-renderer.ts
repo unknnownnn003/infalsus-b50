@@ -1,0 +1,145 @@
+import { preloadJackets, type JacketImageLoader } from "./assets";
+import { renderB50Card } from "./card-renderer";
+import { calculateB50Layout } from "./layout";
+import type { B50RenderModel } from "./types";
+
+const PALETTE = {
+  background: "#111015",
+  surface: "#19161d",
+  card: "#1d1a20",
+  edge: "#342d35",
+  text: "#f6f1f3",
+  secondary: "#c4bac4",
+  muted: "#938994",
+  accent: "#f36d70",
+};
+
+export interface PngRenderResult {
+  blob: Blob;
+  width: number;
+  height: number;
+}
+
+export interface PngRenderOptions {
+  baseUrl?: string;
+  createCanvas?: () => HTMLCanvasElement;
+  loadImage?: JacketImageLoader;
+}
+
+function roundedRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): void {
+  const r = Math.min(radius, width / 2, height / 2);
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.lineTo(x + width - r, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + r);
+  context.lineTo(x + width, y + height - r);
+  context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  context.lineTo(x + r, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - r);
+  context.lineTo(x, y + r);
+  context.quadraticCurveTo(x, y, x + r, y);
+  context.closePath();
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
+}
+
+function drawHeader(context: CanvasRenderingContext2D, model: B50RenderModel, width: number): void {
+  context.fillStyle = PALETTE.surface;
+  context.fillRect(0, 0, width, 300);
+  context.fillStyle = PALETTE.accent;
+  context.fillRect(0, 0, width, 4);
+  context.fillRect(48, 46, 3, 112);
+
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+  context.font = "750 18px system-ui, sans-serif";
+  context.fillStyle = PALETTE.accent;
+  context.fillText("IN FALSUS", 66, 58);
+
+  context.font = "800 78px system-ui, sans-serif";
+  context.fillStyle = PALETTE.text;
+  context.fillText("BEST 50", 62, 132);
+  if (model.playerName) {
+    context.font = "550 22px system-ui, sans-serif";
+    context.fillStyle = PALETTE.secondary;
+    context.fillText(model.playerName, 66, 176, width - 130);
+  }
+
+  const labels = ["B50 AVERAGE RATING", "B50 TOTAL RATING", "PARSED CHARTS", "MATCHED CHARTS"];
+  const values = [
+    model.averageRating.toFixed(2),
+    model.totalRating.toFixed(2),
+    formatNumber(model.parsedCharts),
+    formatNumber(model.matchedCharts),
+  ];
+  const left = 48;
+  const gap = 12;
+  const cellWidth = (width - 2 * left - 3 * gap) / 4;
+  const y = 211;
+  for (let index = 0; index < labels.length; index += 1) {
+    const x = left + index * (cellWidth + gap);
+    roundedRect(context, x, y, cellWidth, 58, 9);
+    context.fillStyle = PALETTE.card;
+    context.fill();
+    context.strokeStyle = PALETTE.edge;
+    context.lineWidth = 1;
+    context.stroke();
+    context.textAlign = "left";
+    context.font = "650 10px system-ui, sans-serif";
+    context.fillStyle = PALETTE.muted;
+    context.fillText(labels[index] ?? "", x + 14, y + 17);
+    context.font = "750 23px system-ui, sans-serif";
+    context.fillStyle = index < 2 ? PALETTE.text : PALETTE.secondary;
+    context.fillText(values[index] ?? "", x + 14, y + 42, cellWidth - 28);
+  }
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob === null) {
+        reject(new Error("The browser could not encode the B50 canvas as PNG."));
+        return;
+      }
+      resolve(blob);
+    }, "image/png");
+  });
+}
+
+export async function renderB50Png(
+  model: B50RenderModel,
+  options: PngRenderOptions = {},
+): Promise<PngRenderResult> {
+  if (model.entries.length === 0) throw new Error("At least one matched chart is required to export a B50 image.");
+  const layout = calculateB50Layout(model.entries.length);
+  const canvas = options.createCanvas?.() ?? document.createElement("canvas");
+  canvas.width = layout.width;
+  canvas.height = layout.height;
+  const context = canvas.getContext("2d");
+  if (context === null) throw new Error("The browser does not provide a 2D canvas context.");
+
+  context.fillStyle = PALETTE.background;
+  context.fillRect(0, 0, layout.width, layout.height);
+  drawHeader(context, model, layout.width);
+  const images = await preloadJackets(model.entries, options.baseUrl ?? "/", options.loadImage);
+  model.entries.forEach((entry, index) => {
+    const position = layout.cardPosition(index);
+    const image = entry.jacket ? images.get(entry.jacket.thumbnail) ?? null : null;
+    renderB50Card(context, entry, image, position.x, position.y, layout.cardWidth, layout.cardHeight);
+  });
+
+  const blob = await canvasToBlob(canvas);
+  if (blob.type !== "image/png" || blob.size < 8) {
+    throw new Error("The browser returned an invalid or empty PNG image.");
+  }
+  return { blob, width: layout.width, height: layout.height };
+}

@@ -1,6 +1,6 @@
 # In Falsus B50
 
-Browser-only In Falsus save reader and Best 50 calculator. **Stage 1 data-pipeline tests, typecheck, production build, and one local real-save comparison pass.** It parses score records, resolves chart metadata, calculates per-chart Rating, and presents a ranked B50 table. The final shareable image is not implemented.
+Browser-only In Falsus save reader and Best 50 calculator. It parses score records, resolves chart metadata, calculates per-chart Rating, and presents a ranked B50 table. The final shareable image is not implemented.
 
 ## Privacy
 

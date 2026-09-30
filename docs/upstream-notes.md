@@ -14,9 +14,11 @@ Sources reviewed:
 - Candidate records are not accepted from a single matching number: the upstream parser checks repeated song/difficulty values in the payload and validates the declared array count against sequential records.
 - The upstream parser's MemoryPack string locator validates the negative length marker, byte length, and printable ASCII song basename before accepting a candidate.
 
-## Current score-width discrepancy
+## PlayerScore contract and validation
 
-The project request specifies a signed little-endian 64-bit `PlayerScore` at payload offset `+0x53`. The currently reviewed public `savefile.py` reads an unsigned 32-bit value at that same offset. This project follows its explicit `i64` contract for now. The difference is unresolved until compared with a real local save and the upstream Python parser; no real save has been included in this repository.
+- The public upstream `savefile.py` reads `PlayerScore` as a little-endian signed 64-bit integer at payload offset `+0x53`, using `struct.unpack_from('<q', pl, 0x53 - shift)[0]`.
+- This project follows the same `+0x53` little-endian signed `i64` contract. There is no score-width discrepancy to track.
+- One local real `.sav` was compared with the upstream Python parser. Every parsed record matched on `songId`, `difficultyIndex`, and `score`. The save and its score contents remain local and are not included in this repository; this check validates that sample only.
 
 ## Confirmed from InFalsus-Resource documentation
 
@@ -33,4 +35,4 @@ The project request specifies a signed little-endian 64-bit `PlayerScore` at pay
 - `songId + difficultyIndex` maps to `chartId`.
 - The compact runtime catalog is a snapshot, not an independently curated long-term database. Rhythm Archive is planned to generate it.
 - Save parsing is limited to score identity and score. The rest of the upstream save parser is out of scope.
-- Upstream structural observations are references, not a guarantee of format compatibility. Real-save differential verification remains necessary.
+- Upstream structural observations are references, not a guarantee of future format compatibility. Revalidate against a real local save if the game save format or upstream parsing logic changes.

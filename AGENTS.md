@@ -27,7 +27,7 @@
 - Keep parser, catalog source/loader, rating/B50 logic, and UI in separate modules.
 - Core algorithms must not depend on browser DOM APIs.
 - Keep TypeScript strict and preserve explicit, testable data contracts.
-- Avoid full test/build runs after tiny edits. Run relevant tests during module work and the complete project gate at the end of a phase.
-- Update `开发记录.md` at the end of each phase.
+- Phase acceptance relies on relevant automated tests, typecheck, production build, necessary real-data validation, durable README/docs updates where needed, and a milestone Git commit with a clean working tree. Do not require a separate process log.
+- Avoid full test/build runs after tiny edits. Run relevant checks during module work and the complete project gate at the end of a phase.
 - Commit only at a clear milestone, not after every small change.
 - Do not commit original game assets or large jackets; future thumbnails should come from Rhythm Archive.

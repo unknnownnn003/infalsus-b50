@@ -90,7 +90,7 @@ describe("buildB50", () => {
       scoreRecord(1, 0, 140_000_000n),
       scoreRecord(2, 0, 0n),
     ], catalog(charts));
-    expect(result.entries.map((entry) => entry.rating)).toEqual([140, 0]);
-    expect(result.averageRating).toBe(70);
+    expect(result.entries.map((entry) => entry.rating)).toEqual([14, 0]);
+    expect(result.averageRating).toBe(7);
   });
 });

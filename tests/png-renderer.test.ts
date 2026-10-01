@@ -20,6 +20,11 @@ function modelWithFiftyEntries(): B50RenderModel {
     })),
     averageRating: 100,
     totalRating: 5000,
+    b30AverageRating: 100,
+    b30TotalRating: 3000,
+    b10AverageRating: 100,
+    b10TotalRating: 1000,
+    overallPotential: 100,
     parsedCharts: 82,
     matchedCharts: 80,
   };

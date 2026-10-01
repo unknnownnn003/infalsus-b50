@@ -121,7 +121,7 @@ function makeCard(entry: ReturnType<typeof buildB50RenderModel>["entries"][numbe
   const rating = document.createElement("div");
   rating.className = "card-rating";
   const ratingLabel = document.createElement("span");
-  ratingLabel.textContent = "RATING";
+  ratingLabel.textContent = "POTENTIAL";
   const ratingNumber = document.createElement("strong");
   ratingNumber.textContent = formatRating(entry.rating);
   rating.append(ratingLabel, ratingNumber);
@@ -195,12 +195,12 @@ function renderDiagnostics(result: B50Result): void {
 function renderResult(result: B50Result): void {
   clearPngDownload();
   const model = buildB50RenderModel(result, catalog);
-  getElement<HTMLElement>("parsed-count").textContent = formatInteger(model.parsedCharts);
-  getElement<HTMLElement>("matched-count").textContent = formatInteger(model.matchedCharts);
   getElement<HTMLElement>("unmatched-count").textContent = formatInteger(result.unmatchedScores);
   getElement<HTMLElement>("b50-count").textContent = formatInteger(model.entries.length);
-  getElement<HTMLElement>("average-rating").textContent = formatRating(model.averageRating);
-  getElement<HTMLElement>("total-rating").textContent = formatRating(model.totalRating);
+  getElement<HTMLElement>("b50-average-rating").textContent = formatRating(model.averageRating);
+  getElement<HTMLElement>("b30-average-rating").textContent = formatRating(model.b30AverageRating);
+  getElement<HTMLElement>("b10-average-rating").textContent = formatRating(model.b10AverageRating);
+  getElement<HTMLElement>("overall-potential").textContent = formatRating(model.overallPotential);
   renderDiagnostics(result);
   renderTable(result.entries);
   renderCards(result);
@@ -351,12 +351,21 @@ function exportJson(): void {
   const model = currentRenderModel();
   if (model === null) return;
   const exportData = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     catalogVersion: catalog.catalogVersion,
-    ratingRule: "In Falsus B50 v1: Arcaea single-play formula on score / 10, then rating * 10; 100M score is capped.",
+    ratingRule: "In Falsus B50 v2: Arcaea single-play potential on score / 10; cleared plays receive +0.2; overall=(Best 50 total+Best 10 total)/60.",
     ...currentResult,
     presentation: {
       ...(model.playerName === undefined ? {} : { playerName: model.playerName }),
+      summary: {
+        b50AverageRating: model.averageRating,
+        b50TotalRating: model.totalRating,
+        b30AverageRating: model.b30AverageRating,
+        b30TotalRating: model.b30TotalRating,
+        b10AverageRating: model.b10AverageRating,
+        b10TotalRating: model.b10TotalRating,
+        overallPotential: model.overallPotential,
+      },
       entries: model.entries.map((entry) => ({ ...entry, score: entry.score.toString() })),
     },
   };

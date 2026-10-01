@@ -7,7 +7,7 @@ In Falsus B50 reads a save file in your browser, calculates the Best 50 chart re
 ## Use it
 
 1. Open the site and select or drop your `savestate_V3.sav` file.
-2. Review the ranked B50 cards, average and total Rating, and detailed score diagnostics.
+2. Review the ranked B50 cards, B50/B30/B10 averages, overall potential value, and detailed score diagnostics.
 3. Export the result as a PNG image or JSON file.
 
 The page also shows where the save lives and copies that path for you. It is usually located at:
@@ -22,17 +22,17 @@ Replace `<SteamID64>` with the account folder on your computer. The path above i
 
 The save is parsed locally in your browser and is never uploaded or sent to a server or remote API. The site has no backend, account system, analytics, or telemetry. The optional display name for exports remains in the current page and is not saved or uploaded.
 
-## Rating
+## 潜力值
 
-The calculation follows the shape of Arcaea's single-chart Play Rating formula, adapted to In Falsus's score scale (10×) and with the final Rating displayed at a 10× scale. This is the project's calculation convention, not a claim about a Rating shown by the game. The chart's source `Rating` supplies the formula constant; its display level is kept separate.
+Each chart's potential uses Arcaea's single-play formula. In Falsus scores use a 10× scale, so the formula first divides the score by 10. The source `Rating` supplies the chart constant; its display level remains separate. A cleared play adds `0.200`; a failed or missing clear status adds `0.000`.
 
-For chart constant `C` and In Falsus score `S`:
+For chart constant `C`, In Falsus score `S`, and normalized score `A = S / 10`:
 
-- `S ≥ 100,000,000`: `10 × (C + 2)`
-- `98,000,000 ≤ S < 100,000,000`: `10 × (C + 1 + (S − 98,000,000) / 2,000,000)`
-- `S < 98,000,000`: `10 × max(C + (S − 95,000,000) / 3,000,000, 0)`
+- `A ≥ 10,000,000`: `C + 2 + clearBonus`
+- `9,800,000 ≤ A < 10,000,000`: `C + 1 + (A − 9,800,000) / 200,000 + clearBonus`
+- `A < 9,800,000`: `max(C + (A − 9,500,000) / 300,000 + clearBonus, 0)`
 
-Scores of 100,000,000 or higher are capped at `10 × (C + 2)`.
+The B30 and B10 values are averages of the top 30 and top 10 available chart potentials. The overall potential is `(Best 50 total + Best 10 total) / 60`.
 
 ## Catalog and artwork
 

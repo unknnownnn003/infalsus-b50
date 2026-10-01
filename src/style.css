@@ -269,7 +269,7 @@ code { color: #e7dce3; font-family: ui-monospace, "Cascadia Code", Consolas, mon
 
 .stats-band {
   display: grid;
-  grid-template-columns: 1.18fr 1.18fr .9fr .9fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 1.2fr;
   border-top: 1px solid var(--edge);
   border-bottom: 1px solid var(--edge);
   background: var(--surface);
@@ -289,7 +289,9 @@ code { color: #e7dce3; font-family: ui-monospace, "Cascadia Code", Consolas, mon
 .stat-label { color: var(--dust); font-size: 9px; letter-spacing: .13em; }
 .stat strong { color: var(--chalk); font-size: 25px; font-weight: 720; font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
 .stat-primary strong { font-size: 30px; }
-.stat-total strong { color: #e0cbd3; }
+.stat-overall { border-left: 3px solid var(--scarlet); background: linear-gradient(110deg, rgba(243, 109, 112, .12), rgba(243, 109, 112, .025)); }
+.stat-overall .stat-label { color: var(--scarlet); font-weight: 750; }
+.stat-overall strong { color: var(--scarlet); font-size: 30px; }
 
 .cards-heading { display: flex; align-items: center; justify-content: space-between; margin: 28px 0 12px; }
 .cards-heading h3 { margin: 0; color: var(--ash); font-size: 10px; font-weight: 750; letter-spacing: .14em; }
@@ -501,7 +503,7 @@ tbody tr:hover { background: rgba(255,255,255,.025); }
   .stat { min-height: 76px; padding: 11px 12px; }
   .stat-label { font-size: 8px; }
   .stat strong { font-size: 21px; }
-  .stat-primary strong { font-size: 24px; }
+  .stat-primary strong, .stat-overall strong { font-size: 24px; }
   .cards-heading { margin-top: 23px; }
   .b50-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .b50-card { min-height: 178px; padding: 12px 13px; }

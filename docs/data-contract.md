@@ -4,7 +4,7 @@
 
 The stable cross-project mapping is `songId + difficultyIndex ↔ chartId`.
 
-Save data identifies a result by `songId` and zero-based `difficultyIndex`. The generated game songlist resolves that identity to `chartId`, which is the identifier used by chart-preview tooling. Titles and artists are display metadata and are never identity keys.
+Save data identifies a result by `songId` and zero-based `difficultyIndex`. The generated game songlist resolves that identity to `chartId`, which is the identifier used by chart-preview tooling. Titles and artists are display metadata and are never identity keys. The parser also retains the per-result clear lamp when it is failed or cleared.
 
 ## Generated game songlist
 
@@ -58,12 +58,14 @@ If no semantic game version is present in the installed data, `gameVersion` stay
 
 ## Runtime catalog adapter
 
-The catalog loader indexes only charts with `available: true`. It maps game `rating` to the existing internal `constant` property consumed by the frozen Rating formula. The loader carries `levelIndicator` separately. Chart identity indexes remain `songId:difficultyIndex` and `chartId`.
+The catalog loader indexes only charts with `available: true`. It maps game `rating` to the existing internal `constant` property consumed by the potential formula. The loader carries `levelIndicator` separately. Chart identity indexes remain `songId:difficultyIndex` and `chartId`.
 
-The app JSON export remains schema version 2. It encodes `BigInt` scores as decimal strings and includes the resolved chart metadata in its presentation section. It does not alter score values or rating results.
+The app JSON export is schema version 3. It encodes `BigInt` scores as decimal strings and includes the resolved chart metadata, clear status, and B50/B30/B10/overall potential summary in its presentation section.
 
-## B50 outputs
+## Potential and B50 outputs
 
-Matched scores sort by Rating descending, score descending, constant descending, songId ascending, then difficultyIndex ascending. The result contains at most 50 entries and never pads missing slots. `totalRating` is the sum of returned entries; `averageRating` divides that total by the returned entry count, or is 0 when empty. Match and unmatched counts describe every parsed record. Unmatched identities remain diagnostics and receive no guessed metadata.
+The single-chart potential applies the Arcaea formula to `score / 10`. The upstream `GameResultLamp` values are None `0`, Fail `1`, and Clear `2`; only Clear contributes `0.200`. The parser validates this field and keeps the status tied to the same score record. See the [upstream save decoder](https://github.com/REDDRAGON-HL/InFalsus-SaveData-Parser/blob/main/savefile.py).
 
-`B50RenderModel` contains at most 50 ranked entries with score, Rating, chart metadata, and an optional same-origin jacket path. Canvas layout and text fitting are deterministic pure calculations. The Canvas renderer accepts the model and preloaded local images; it does not read DOM content, save bytes, or remote URLs.
+Matched scores sort by potential descending, score descending, constant descending, songId ascending, then difficultyIndex ascending. The result contains at most 50 entries and never pads missing slots. `totalRating` is the sum of returned B50 potentials; `averageRating` divides that total by the returned entry count, or is 0 when empty. B30 and B10 totals and averages use the first 30 and 10 returned entries. `overallPotential` is `(totalRating + b10TotalRating) / 60`. Match and unmatched counts describe every parsed record. Unmatched identities remain diagnostics and receive no guessed metadata.
+
+`B50RenderModel` contains at most 50 ranked entries with score, single-play potential, clear status, chart metadata, and an optional same-origin jacket path. Canvas layout and text fitting are deterministic pure calculations. The Canvas renderer accepts the model and preloaded local images; it does not read DOM content, save bytes, or remote URLs.

@@ -18,11 +18,11 @@ Rhythm Archive is read only by the diagnostic comparison command. It can validat
 
 Local `.sav` file
   -> browser `ArrayBuffer`
-  -> fail-closed score parser
+  -> fail-closed score and clear-status parser
   -> `ScoreRecord[]`
   -> generated game songlist resolver using `songId + difficultyIndex`
   -> available chart metadata, including `chartId`, `Rating`, title, and jacket
-  -> frozen Rating calculation and B50 ranking
+  -> Arcaea-scale single-play potential calculation and B50 ranking
   -> B50 render model and detail table
   -> DOM cards, JSON export, and independent Canvas renderer -> PNG Blob
 
@@ -45,4 +45,4 @@ Titles and artists are display metadata, never identity keys. The deployed page 
 
 ## Trust boundaries
 
-The save parser validates boundaries, record count, key repetition, difficulty flags, and fixed payload length before returning scores. Unsupported or ambiguous data fails closed. The generated songlist validates IDs, chart identities, difficulty mapping, availability, ratings, and local jacket paths before lookup. Missing charts remain unmatched and never receive an invented constant.
+The save parser validates boundaries, record count, repeated identity, difficulty flags, clear lamp status, fixed payload length, and non-negative signed scores before returning records. Unsupported or ambiguous data fails closed. The generated songlist validates IDs, chart identities, difficulty mapping, availability, ratings, and local jacket paths before lookup. Missing charts remain unmatched and never receive an invented constant.

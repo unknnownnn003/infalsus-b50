@@ -48,10 +48,6 @@ function roundedRect(
   context.closePath();
 }
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
-}
-
 function drawHeader(context: CanvasRenderingContext2D, model: B50RenderModel, width: number): void {
   context.fillStyle = PALETTE.surface;
   context.fillRect(0, 0, width, 300);
@@ -74,12 +70,12 @@ function drawHeader(context: CanvasRenderingContext2D, model: B50RenderModel, wi
     context.fillText(model.playerName, 66, 176, width - 130);
   }
 
-  const labels = ["B50 AVERAGE RATING", "B50 TOTAL RATING", "SAVE CHARTS", "MATCHED CHARTS"];
+  const labels = ["B50 AVERAGE POTENTIAL", "B30 AVERAGE POTENTIAL", "B10 AVERAGE POTENTIAL", "OVERALL POTENTIAL"];
   const values = [
     model.averageRating.toFixed(2),
-    model.totalRating.toFixed(2),
-    formatNumber(model.parsedCharts),
-    formatNumber(model.matchedCharts),
+    model.b30AverageRating.toFixed(2),
+    model.b10AverageRating.toFixed(2),
+    model.overallPotential.toFixed(2),
   ];
   const left = 48;
   const gap = 12;
@@ -98,7 +94,7 @@ function drawHeader(context: CanvasRenderingContext2D, model: B50RenderModel, wi
     context.fillStyle = PALETTE.muted;
     context.fillText(labels[index] ?? "", x + 14, y + 17);
     context.font = "750 23px system-ui, sans-serif";
-    context.fillStyle = index < 2 ? PALETTE.text : PALETTE.secondary;
+    context.fillStyle = index === 3 ? PALETTE.accent : PALETTE.text;
     context.fillText(values[index] ?? "", x + 14, y + 42, cellWidth - 28);
   }
 }

@@ -19,7 +19,7 @@ export function buildB50(records: readonly ScoreRecord[], catalog: CatalogIndex)
       rank: 0,
       chartId: chart.chartId,
       constant: chart.constant,
-      rating: calculateRating(chart.constant, record.score),
+      rating: calculateRating(chart.constant, record.score, record.clearStatus),
       title: chart.title,
       difficulty: chart.difficulty,
     });
@@ -35,11 +35,20 @@ export function buildB50(records: readonly ScoreRecord[], catalog: CatalogIndex)
 
   const entries = rated.slice(0, 50).map((entry, index) => ({ ...entry, rank: index + 1 }));
   const totalRating = entries.reduce((sum, entry) => sum + entry.rating, 0);
+  const b30Entries = entries.slice(0, 30);
+  const b10Entries = entries.slice(0, 10);
+  const b30TotalRating = b30Entries.reduce((sum, entry) => sum + entry.rating, 0);
+  const b10TotalRating = b10Entries.reduce((sum, entry) => sum + entry.rating, 0);
 
   return {
     entries,
     totalRating,
     averageRating: entries.length === 0 ? 0 : totalRating / entries.length,
+    b30TotalRating,
+    b30AverageRating: b30Entries.length === 0 ? 0 : b30TotalRating / b30Entries.length,
+    b10TotalRating,
+    b10AverageRating: b10Entries.length === 0 ? 0 : b10TotalRating / b10Entries.length,
+    overallPotential: (totalRating + b10TotalRating) / 60,
     totalParsedScores: records.length,
     matchedScores: rated.length,
     unmatchedScores: diagnostics.length,

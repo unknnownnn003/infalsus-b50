@@ -14,6 +14,11 @@ export interface B50RenderModel {
   entries: B50RenderEntry[];
   averageRating: number;
   totalRating: number;
+  b30AverageRating: number;
+  b30TotalRating: number;
+  b10AverageRating: number;
+  b10TotalRating: number;
+  overallPotential: number;
   parsedCharts: number;
   matchedCharts: number;
   playerName?: string;

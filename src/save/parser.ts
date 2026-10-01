@@ -10,6 +10,7 @@ const MAX_BASENAME_BYTES = 256;
 const MIN_ELEMENT_BYTES = 1 + 8 + 1 + RECORD_PAYLOAD_BYTES;
 export const MAX_SAVE_FILE_BYTES = 64 * 1024 * 1024;
 const VALID_DIFFICULTY_FLAGS = new Set([1, 2, 4, 8]);
+const VALID_LAMP_STATUSES = new Set([0, 1, 2]);
 
 interface Candidate {
   arrayOffset: number;
@@ -53,21 +54,25 @@ function parseElement(reader: BinaryReader, elementOffset: number): ScoreRecord 
   const difficultyFlag = reader.readUint8(payloadOffset + 2);
   const repeatedSongId = reader.readUint16LE(payloadOffset + 3);
   const repeatedDifficultyFlag = reader.readUint8(payloadOffset + 5);
+  const lampStatus = reader.readUint8(payloadOffset + 6);
   if (
     songId !== repeatedSongId
     || difficultyFlag !== repeatedDifficultyFlag
     || !VALID_DIFFICULTY_FLAGS.has(difficultyFlag)
+    || !VALID_LAMP_STATUSES.has(lampStatus)
   ) {
     return null;
   }
 
   const score = reader.readBigInt64LE(payloadOffset + PLAYER_SCORE_OFFSET);
   if (score < 0n) return null;
+  const clearStatus = lampStatus === 1 ? "failed" : lampStatus === 2 ? "cleared" : undefined;
 
   return {
     songId,
     difficultyIndex: Math.log2(difficultyFlag),
     score,
+    ...(clearStatus === undefined ? {} : { clearStatus }),
   };
 }
 

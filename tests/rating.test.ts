@@ -3,11 +3,11 @@ import { calculateRating } from "../src/rating/rating";
 
 describe("calculateRating", () => {
   it.each([
-    { score: 95_000_000n, expected: 120 },
-    { score: 98_000_000n, expected: 130 },
-    { score: 99_000_000n, expected: 135 },
-    { score: 100_000_000n, expected: 140 },
-    { score: 120_000_000n, expected: 140 },
+    { score: 95_000_000n, expected: 12 },
+    { score: 98_000_000n, expected: 13 },
+    { score: 99_000_000n, expected: 13.5 },
+    { score: 100_000_000n, expected: 14 },
+    { score: 120_000_000n, expected: 14 },
   ])("maps score $score with constant 12 to $expected", ({ score, expected }) => {
     expect(calculateRating(12, score)).toBe(expected);
   });
@@ -18,8 +18,8 @@ describe("calculateRating", () => {
   });
 
   it("preserves fractional constants and does not round during calculation", () => {
-    expect(calculateRating(12.5, 99_000_000n)).toBe(140);
-    expect(calculateRating(12.5, 98_500_000n)).toBe(137.5);
+    expect(calculateRating(12.5, 99_000_000n)).toBe(14);
+    expect(calculateRating(12.5, 98_500_000n)).toBe(13.75);
   });
 
   it("rejects negative scores and invalid constants", () => {

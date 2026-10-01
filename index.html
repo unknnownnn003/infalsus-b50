@@ -101,28 +101,28 @@
             </div>
           </div>
 
-          <div class="stats-band" aria-label="B50 与存档统计">
-            <div class="stat stat-primary">
-              <span class="stat-label">B50 平均 Rating</span>
-              <strong id="average-rating">0.00</strong>
-            </div>
-            <div class="stat stat-total">
-              <span class="stat-label">B50 Rating 合计</span>
-              <strong id="total-rating">0.00</strong>
+          <div class="stats-band" aria-label="B50、B30、B10 与整体潜力值">
+            <div class="stat">
+              <span class="stat-label">B50 平均潜力值</span>
+              <strong id="b50-average-rating">0.00</strong>
             </div>
             <div class="stat">
-              <span class="stat-label">存档里的谱面</span>
-              <strong id="parsed-count">0</strong>
+              <span class="stat-label">B30 平均潜力值</span>
+              <strong id="b30-average-rating">0.00</strong>
             </div>
             <div class="stat">
-              <span class="stat-label">认出并计分的</span>
-              <strong id="matched-count">0</strong>
+              <span class="stat-label">B10 平均潜力值</span>
+              <strong id="b10-average-rating">0.00</strong>
+            </div>
+            <div class="stat stat-overall stat-primary">
+              <span class="stat-label">整体潜力值</span>
+              <strong id="overall-potential">0.00</strong>
             </div>
           </div>
 
           <div class="cards-heading">
             <h3><span class="heading-slash">/</span> BEST 50</h3>
-            <p>Rating 从高到低 <span aria-hidden="true">·</span> 一张谱面一条记录</p>
+            <p>单曲潜力值从高到低 <span aria-hidden="true">·</span> 一张谱面一条记录</p>
           </div>
           <div id="b50-cards" class="b50-grid" role="list" aria-label="B50 排名成绩"></div>
 
@@ -147,7 +147,7 @@
                     <th scope="col">难度</th>
                     <th scope="col">定数</th>
                     <th scope="col">分数</th>
-                    <th scope="col">Rating</th>
+                    <th scope="col">单曲潜力值</th>
                     <th scope="col">谱面 ID</th>
                   </tr>
                 </thead>

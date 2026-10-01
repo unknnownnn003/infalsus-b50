@@ -10,7 +10,7 @@ In Falsus B50 reads a save file in your browser, calculates the Best 50 chart re
 2. Review the ranked B50 cards, average and total Rating, and detailed score diagnostics.
 3. Export the result as a PNG image or JSON file.
 
-The save is usually located at:
+The page also shows where the save lives and copies that path for you. It is usually located at:
 
 ```text
 %USERPROFILE%\AppData\LocalLow\lowiro\infalsus\<SteamID64>\release\savestate_V3.sav

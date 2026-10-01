@@ -74,7 +74,7 @@ function drawHeader(context: CanvasRenderingContext2D, model: B50RenderModel, wi
     context.fillText(model.playerName, 66, 176, width - 130);
   }
 
-  const labels = ["B50 AVERAGE RATING", "B50 TOTAL RATING", "PARSED CHARTS", "MATCHED CHARTS"];
+  const labels = ["B50 AVERAGE RATING", "B50 TOTAL RATING", "SAVE CHARTS", "MATCHED CHARTS"];
   const values = [
     model.averageRating.toFixed(2),
     model.totalRating.toFixed(2),
@@ -107,7 +107,7 @@ function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob === null) {
-        reject(new Error("The browser could not encode the B50 canvas as PNG."));
+        reject(new Error("浏览器没能把这张图编码成 PNG。"));
         return;
       }
       resolve(blob);
@@ -119,13 +119,13 @@ export async function renderB50Png(
   model: B50RenderModel,
   options: PngRenderOptions = {},
 ): Promise<PngRenderResult> {
-  if (model.entries.length === 0) throw new Error("At least one matched chart is required to export a B50 image.");
+  if (model.entries.length === 0) throw new Error("还没有可以导出的成绩，先读一个存档。");
   const layout = calculateB50Layout(model.entries.length);
   const canvas = options.createCanvas?.() ?? document.createElement("canvas");
   canvas.width = layout.width;
   canvas.height = layout.height;
   const context = canvas.getContext("2d");
-  if (context === null) throw new Error("The browser does not provide a 2D canvas context.");
+  if (context === null) throw new Error("这个浏览器给不了 2D 画布，没法生成图片。");
 
   context.fillStyle = PALETTE.background;
   context.fillRect(0, 0, layout.width, layout.height);
@@ -139,7 +139,7 @@ export async function renderB50Png(
 
   const blob = await canvasToBlob(canvas);
   if (blob.type !== "image/png" || blob.size < 8) {
-    throw new Error("The browser returned an invalid or empty PNG image.");
+    throw new Error("生成的图片是空的，请再生成一次。");
   }
   return { blob, width: layout.width, height: layout.height };
 }

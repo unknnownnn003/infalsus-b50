@@ -23,12 +23,15 @@ const cardGrid = getElement<HTMLDivElement>("b50-cards");
 const tableBody = getElement<HTMLTableSectionElement>("table-body");
 const diagnosticsSection = getElement<HTMLDivElement>("diagnostics");
 const diagnosticList = getElement<HTMLUListElement>("diagnostic-list");
+const copyPathButton = getElement<HTMLButtonElement>("copy-path-button");
+const savePathValue = getElement<HTMLElement>("save-path-value");
 
 let currentResult: B50Result | null = null;
 let fileRequestSequence = 0;
 let pngRenderSequence = 0;
 let activePngRenderSequence: number | null = null;
 let pngObjectUrl: string | null = null;
+let copyPathResetTimer: number | null = null;
 
 function getElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -138,9 +141,9 @@ function renderCards(result: B50Result): void {
     mark.className = "empty-mark";
     mark.textContent = "—";
     const title = document.createElement("h3");
-    title.textContent = "还没有可排名的成绩";
+    title.textContent = "存档读到了，但一张谱面都没匹配上";
     const message = document.createElement("p");
-    message.textContent = "已读取存档；请展开详细成绩与诊断，查看未匹配的谱面身份。";
+    message.textContent = "展开下面的明细，看看是哪些谱面没认出来。";
     empty.append(mark, title, message);
     cardGrid.append(empty);
     return;
@@ -155,7 +158,7 @@ function renderTable(entries: RatedScore[]): void {
     const cell = document.createElement("td");
     cell.colSpan = 7;
     cell.className = "empty-cell";
-    cell.textContent = "没有成功匹配的谱面。";
+    cell.textContent = "没有匹配上的谱面。";
     row.append(cell);
     tableBody.append(row);
     return;
@@ -179,12 +182,12 @@ function renderDiagnostics(result: B50Result): void {
   diagnosticsSection.hidden = result.diagnostics.length === 0;
   for (const diagnostic of result.diagnostics.slice(0, 50)) {
     const item = document.createElement("li");
-    item.textContent = "songId " + diagnostic.songId + " · difficultyIndex " + diagnostic.difficultyIndex;
+    item.textContent = "songId " + diagnostic.songId + " · 难度 " + diagnostic.difficultyIndex;
     diagnosticList.append(item);
   }
   if (result.diagnostics.length > 50) {
     const more = document.createElement("li");
-    more.textContent = "另有 " + formatInteger(result.diagnostics.length - 50) + " 条未显示。";
+    more.textContent = "还有 " + formatInteger(result.diagnostics.length - 50) + " 条没列出来。";
     diagnosticList.append(more);
   }
 }
@@ -217,6 +220,22 @@ function showError(message: string): void {
   jsonButton.disabled = true;
 }
 
+async function copySavePath(): Promise<void> {
+  const path = savePathValue.textContent ?? "";
+  let label = "已复制";
+  try {
+    await navigator.clipboard.writeText(path);
+  } catch {
+    label = "请手动选中复制";
+  }
+  copyPathButton.textContent = label;
+  if (copyPathResetTimer !== null) window.clearTimeout(copyPathResetTimer);
+  copyPathResetTimer = window.setTimeout(() => {
+    copyPathButton.textContent = "复制路径";
+    copyPathResetTimer = null;
+  }, 2200);
+}
+
 async function processFile(file: File | undefined): Promise<void> {
   if (file === undefined) return;
   const requestSequence = ++fileRequestSequence;
@@ -224,17 +243,17 @@ async function processFile(file: File | undefined): Promise<void> {
   activePngRenderSequence = null;
   clearPngDownload();
   if (!file.name.toLowerCase().endsWith(".sav")) {
-    showError("请选择扩展名为 .sav 的存档文件。");
+    showError("这个文件不是 .sav，请选择 savestate_V3.sav。");
     fileInput.value = "";
     return;
   }
   if (file.size > MAX_SAVE_FILE_BYTES) {
-    showError("文件超过 64 MiB 支持上限；没有读取或生成成绩结果。");
+    showError("文件超过 64 MiB，应该不是存档，已经停止读取。");
     fileInput.value = "";
     return;
   }
 
-  status.textContent = "正在当前浏览器中解析存档…";
+  status.textContent = "正在读取存档…";
   status.className = "status";
   exportStatus.textContent = "";
   pngButton.disabled = true;
@@ -249,11 +268,11 @@ async function processFile(file: File | undefined): Promise<void> {
     const result = buildB50(records, catalog);
     currentResult = result;
     renderResult(result);
-    status.textContent = "解析完成。存档内容未离开当前浏览器。";
+    status.textContent = "读好了，下面是你的 Best 50。";
     status.className = "status status-success";
   } catch (error) {
     if (requestSequence !== fileRequestSequence) return;
-    const message = error instanceof Error ? error.message : "解析失败。没有生成成绩结果。";
+    const message = error instanceof Error ? error.message : "存档没读出来，换一个文件再试试。";
     showError(message);
   } finally {
     if (requestSequence === fileRequestSequence) {
@@ -289,7 +308,7 @@ async function exportPng(): Promise<void> {
   activePngRenderSequence = exportSequence;
   clearPngDownload();
   pngButton.disabled = true;
-  exportStatus.textContent = "正在准备曲绘并绘制 B50…";
+  exportStatus.textContent = "正在加载曲绘并绘制图片…";
   try {
     const rendered = await renderB50Png(model, { baseUrl: import.meta.env.BASE_URL });
     if (
@@ -302,7 +321,7 @@ async function exportPng(): Promise<void> {
     pngObjectUrl = URL.createObjectURL(rendered.blob);
     pngDownloadLink.href = pngObjectUrl;
     pngDownloadLink.hidden = false;
-    exportStatus.textContent = "PNG 已生成，尺寸 " + rendered.width + " × " + rendered.height + "；点击“保存 PNG”下载。";
+    exportStatus.textContent = "图片已生成，尺寸 " + rendered.width + " × " + rendered.height + "；点“保存 PNG”下载。";
   } catch (error) {
     if (
       exportSequence !== pngRenderSequence
@@ -311,7 +330,7 @@ async function exportPng(): Promise<void> {
       || currentResult !== sourceResult
       || playerNameInput.value !== sourcePlayerName
     ) return;
-    exportStatus.textContent = error instanceof Error ? error.message : "PNG 导出失败，请稍后重试。";
+    exportStatus.textContent = error instanceof Error ? error.message : "图片没能生成，过一会儿再试一次。";
   } finally {
     if (activePngRenderSequence === exportSequence) {
       activePngRenderSequence = null;
@@ -344,7 +363,7 @@ function exportJson(): void {
   const json = JSON.stringify(exportData, (_key, value: unknown) =>
     typeof value === "bigint" ? value.toString() : value, 2);
   downloadBlob(new Blob([json], { type: "application/json" }), "in-falsus-b50.json");
-  exportStatus.textContent = "JSON 已生成，包含成绩诊断和 B50 展示 metadata。";
+  exportStatus.textContent = "JSON 已生成，里面有成绩明细和 B50 的排序数据。";
 }
 
 fileInput.addEventListener("change", () => {
@@ -367,15 +386,16 @@ dropZone.addEventListener("drop", (event: DragEvent) => {
 });
 pngButton.addEventListener("click", () => void exportPng());
 jsonButton.addEventListener("click", exportJson);
+copyPathButton.addEventListener("click", () => void copySavePath());
 playerNameInput.addEventListener("input", () => {
   if (activePngRenderSequence !== null) {
     pngRenderSequence += 1;
     activePngRenderSequence = null;
-    exportStatus.textContent = "名称已更改；请重新生成 PNG。";
+    exportStatus.textContent = "名字改了，需要重新生成图片。";
     pngButton.disabled = resultsSection.hidden || currentResult?.entries.length === 0 || currentResult === null;
   }
   if (pngObjectUrl !== null) {
     clearPngDownload();
-    exportStatus.textContent = "名称已更改；请重新生成 PNG。";
+    exportStatus.textContent = "名字改了，需要重新生成图片。";
   }
 });

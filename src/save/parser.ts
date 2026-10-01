@@ -103,10 +103,10 @@ function parseCandidate(reader: BinaryReader, firstElementOffset: number, expect
 export function parseSaveFile(input: ArrayBuffer | Uint8Array): ScoreRecord[] {
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
   if (bytes.byteLength > MAX_SAVE_FILE_BYTES) {
-    throw new SaveParseError("file-too-large", "存档超过支持的大小上限。请确认选择的是游戏存档文件。");
+    throw new SaveParseError("file-too-large", "存档文件太大了，不像是一份成绩存档。");
   }
   if (bytes.byteLength < 4 + MIN_RECORDS_FOR_VALIDATION * MIN_ELEMENT_BYTES) {
-    throw new SaveParseError("file-too-small", "文件太小，无法包含有效的成绩记录数组。");
+    throw new SaveParseError("file-too-small", "文件太小了，里面没有成绩记录。");
   }
 
   const reader = new BinaryReader(bytes);
@@ -131,13 +131,13 @@ export function parseSaveFile(input: ArrayBuffer | Uint8Array): ScoreRecord[] {
   if (candidates.length === 0) {
     throw new SaveParseError(
       "unsupported-format",
-      "未能验证成绩记录数组。存档可能已损坏或使用了尚不支持的格式；没有生成成绩结果。",
+      "没能认出存档里的成绩记录。文件可能损坏，也可能是这个工具还不支持的版本。",
     );
   }
   if (candidates.length !== 1) {
     throw new SaveParseError(
       "ambiguous-record-array",
-      "文件中发现多个符合条件的成绩数组，已停止解析以避免输出不确定结果。",
+      "文件里出现了多个成绩记录数组，无法确定该用哪一组，已经停止读取。",
     );
   }
 

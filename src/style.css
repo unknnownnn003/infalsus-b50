@@ -216,6 +216,25 @@ code { color: #e7dce3; font-family: ui-monospace, "Cascadia Code", Consolas, mon
 .button-download:hover { border-color: var(--scarlet); background: #35242c; }
 .button:disabled { opacity: .42; cursor: not-allowed; }
 .button-arrow { font-size: 15px; line-height: 1; }
+.button-ghost { min-height: 30px; padding: 0 10px; color: var(--ash); border-color: var(--edge); background: transparent; font-size: 11px; font-weight: 650; }
+.button-ghost:hover:not(:disabled) { color: var(--chalk); border-color: rgba(238, 221, 232, .28); background: var(--surface-raised); }
+.save-path { margin-top: 11px; padding: 12px 15px 13px; border: 1px solid var(--edge-soft); border-radius: 8px; background: var(--surface-inset); }
+.save-path-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.save-path-label { color: var(--ash); font-size: 11px; font-weight: 700; }
+.save-path-value {
+  display: block;
+  margin-top: 9px;
+  padding: 9px 11px;
+  overflow-x: auto;
+  border: 1px solid var(--edge-soft);
+  border-radius: 6px;
+  background: #120f15;
+  color: #e7dce3;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.save-path-help { margin: 9px 0 0; color: var(--dust); font-size: 11px; line-height: 1.65; }
 .import-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 2px 0; }
 .privacy-note, .status { margin: 0; color: var(--dust); font-size: 11px; line-height: 1.5; }
 .privacy-note { display: inline-flex; align-items: center; gap: 7px; color: #aabdaf; }
@@ -464,6 +483,9 @@ tbody tr:hover { background: rgba(255,255,255,.025); }
   .drop-title { font-size: 12px; }
   .drop-help { font-size: 10px; }
   .drop-zone .button { width: 100%; }
+  .save-path { padding: 11px 12px 12px; }
+  .save-path-value { overflow-x: visible; font-size: 10px; overflow-wrap: anywhere; white-space: normal; }
+  .save-path-help { font-size: 10px; }
   .import-foot { align-items: flex-start; flex-direction: column; gap: 5px; padding-top: 10px; }
   .status { text-align: left; }
   .results { margin-top: 43px; }

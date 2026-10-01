@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#111015" />
-    <meta name="description" content="在浏览器本地解析 In Falsus 存档，查看 Best 50 并导出 PNG。" />
+    <meta name="description" content="读取 In Falsus 存档，算出你的 Best 50，可导出成 PNG 图片。" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <title>In Falsus · Best 50</title>
   </head>
@@ -15,17 +15,17 @@
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
           <span class="brand-name">IN FALSUS</span>
           <span class="brand-divider" aria-hidden="true"></span>
-          <span class="brand-caption">PLAYER ARCHIVE</span>
+          <span class="brand-caption">BEST 50 TOOL</span>
         </div>
-        <div class="local-badge"><span class="local-dot" aria-hidden="true"></span>本地处理</div>
+        <div class="local-badge"><span class="local-dot" aria-hidden="true"></span>本地运行</div>
       </header>
 
       <main>
         <section class="hero" aria-labelledby="page-title">
           <div class="hero-copy">
-            <p class="eyebrow"><span class="eyebrow-mark"></span>PERSONAL SCORE ARCHIVE</p>
+            <p class="eyebrow"><span class="eyebrow-mark"></span>UNOFFICIAL FAN TOOL</p>
             <h1 id="page-title"><span>IN FALSUS</span><strong>BEST 50</strong></h1>
-            <p class="hero-subtitle">把最好的 50 次演奏，排成一页。</p>
+            <p class="hero-subtitle">把你成绩最好的 50 张谱面，排成一页。</p>
           </div>
           <div class="hero-index" aria-hidden="true">
             <strong>50</strong>
@@ -38,7 +38,7 @@
           <div class="section-heading">
             <div class="section-number">01</div>
             <div>
-              <p class="section-kicker">LOCAL SAVE READER</p>
+              <p class="section-kicker">SAVE FILE</p>
               <h2 id="import-title">载入成绩</h2>
             </div>
           </div>
@@ -47,7 +47,7 @@
               <span class="drop-symbol" aria-hidden="true">+</span>
               <div>
                 <p class="drop-title">选择或拖入 <code>savestate_V3.sav</code></p>
-                <p class="drop-help">存档在此设备的浏览器内读取，生成你的个人 B50。</p>
+                <p class="drop-help">读完直接出结果；如果拖进来的不是存档，页面会提示你。</p>
               </div>
             </div>
             <button id="browse-button" class="button button-primary" type="button">
@@ -55,9 +55,23 @@
             </button>
             <input id="file-input" type="file" accept=".sav,application/octet-stream" hidden />
           </div>
+
+          <div class="save-path">
+            <div class="save-path-head">
+              <span class="save-path-label">存档在哪？</span>
+              <button id="copy-path-button" class="button button-ghost" type="button">复制路径</button>
+            </div>
+            <code id="save-path-value" class="save-path-value">C:\Users\&lt;你的用户名&gt;\AppData\LocalLow\lowiro\infalsus\&lt;SteamID64&gt;\release\savestate_V3.sav</code>
+            <p class="save-path-help">
+              把这行粘到文件资源管理器的地址栏就能跳过去。<code>&lt;SteamID64&gt;</code> 是
+              <code>lowiro\infalsus</code> 里那串很长的数字，每台电脑都不一样；<code>&lt;你的用户名&gt;</code>
+              就是你的 Windows 账户文件夹名，也可以用 <code>%USERPROFILE%</code> 代替。
+            </p>
+          </div>
+
           <div class="import-foot">
-            <p id="privacy-note" class="privacy-note"><span class="privacy-lock" aria-hidden="true">◆</span>存档仅在当前浏览器本地解析，不会上传至服务器。</p>
-            <p id="status" class="status" role="status" aria-live="polite">等待选择存档。</p>
+            <p id="privacy-note" class="privacy-note"><span class="privacy-lock" aria-hidden="true">◆</span>存档只在这台电脑的浏览器里读一遍，不会传到网上。</p>
+            <p id="status" class="status" role="status" aria-live="polite">还没有选择存档。</p>
           </div>
         </section>
 
@@ -66,14 +80,14 @@
             <div class="section-heading">
               <div class="section-number">02</div>
               <div>
-                <p class="section-kicker">YOUR PERSONAL RECORD</p>
+                <p class="section-kicker">YOUR BEST 50</p>
                 <h2 id="results-title">最佳成绩 <span class="result-count"><span id="b50-count">0</span><span>/50</span></span></h2>
               </div>
             </div>
             <div class="result-controls">
               <label class="name-field" for="player-name">
-                <span>图片显示名称 <small>可选</small></span>
-                <input id="player-name" type="text" maxlength="32" autocomplete="off" placeholder="仅用于本次导出" />
+                <span>图片上的名字 <small>可选</small></span>
+                <input id="player-name" type="text" maxlength="32" autocomplete="off" placeholder="留空就不显示" />
               </label>
               <div class="export-actions">
                 <button id="export-png-button" class="button button-primary" type="button" disabled>
@@ -89,26 +103,26 @@
 
           <div class="stats-band" aria-label="B50 与存档统计">
             <div class="stat stat-primary">
-              <span class="stat-label">B50 AVERAGE RATING</span>
+              <span class="stat-label">B50 平均 Rating</span>
               <strong id="average-rating">0.00</strong>
             </div>
             <div class="stat stat-total">
-              <span class="stat-label">B50 TOTAL RATING</span>
+              <span class="stat-label">B50 Rating 合计</span>
               <strong id="total-rating">0.00</strong>
             </div>
             <div class="stat">
-              <span class="stat-label">PARSED CHARTS</span>
+              <span class="stat-label">存档里的谱面</span>
               <strong id="parsed-count">0</strong>
             </div>
             <div class="stat">
-              <span class="stat-label">MATCHED CHARTS</span>
+              <span class="stat-label">认出并计分的</span>
               <strong id="matched-count">0</strong>
             </div>
           </div>
 
           <div class="cards-heading">
-            <h3><span class="heading-slash">/</span> RANKED CHARTS</h3>
-            <p>按 Rating 排序 <span aria-hidden="true">·</span> TOP 50</p>
+            <h3><span class="heading-slash">/</span> BEST 50</h3>
+            <p>Rating 从高到低 <span aria-hidden="true">·</span> 一张谱面一条记录</p>
           </div>
           <div id="b50-cards" class="b50-grid" role="list" aria-label="B50 排名成绩"></div>
 
@@ -116,25 +130,25 @@
 
           <details class="details-panel">
             <summary>
-              <span>详细成绩与诊断</span>
-              <span class="details-summary-meta"><span id="unmatched-count">0</span> 条未匹配 <span class="details-toggle" aria-hidden="true">+</span></span>
+              <span>全部成绩明细</span>
+              <span class="details-summary-meta"><span id="unmatched-count">0</span> 条没匹配上 <span class="details-toggle" aria-hidden="true">+</span></span>
             </summary>
             <div id="diagnostics" class="diagnostics" hidden>
-              <h3>未匹配成绩</h3>
-              <p>当前 catalog 没有这些谱面的 metadata；这些记录不会获得猜测的定数，也不会参与 B50。</p>
+              <h3>没匹配上的谱面</h3>
+              <p>这些谱面的定数不在曲目表里，所以不猜数字，也不算进 B50。刚更新过游戏的话，多半是曲目表还没跟上。</p>
               <ul id="diagnostic-list"></ul>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th scope="col">Rank</th>
-                    <th scope="col">Song</th>
-                    <th scope="col">Difficulty</th>
-                    <th scope="col">Constant</th>
-                    <th scope="col">Score</th>
+                    <th scope="col">排名</th>
+                    <th scope="col">曲名</th>
+                    <th scope="col">难度</th>
+                    <th scope="col">定数</th>
+                    <th scope="col">分数</th>
                     <th scope="col">Rating</th>
-                    <th scope="col">Chart ID</th>
+                    <th scope="col">谱面 ID</th>
                   </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -146,7 +160,7 @@
 
       <footer class="site-footer">
         <div class="footer-brand"><span class="footer-mark" aria-hidden="true">IF</span><span>IN FALSUS / BEST 50</span></div>
-        <p>本地解析 · 无上传 · 无账户 · 无遥测</p>
+        <p>非官方粉丝工具 · 与 lowiro 无关 · 曲绘与曲目版权归原作者所有</p>
       </footer>
     </div>
     <script type="module" src="/src/main.ts"></script>

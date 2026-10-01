@@ -1,71 +1,59 @@
 # In Falsus B50
 
-A browser-only tool for reading an In Falsus save, calculating Best 50, reviewing matched charts, and exporting a shareable PNG or diagnostic JSON.
+In Falsus B50 reads a save file in your browser, calculates the Best 50 chart results, and lets you review or export them.
 
-## What it does
+[Open In Falsus B50](https://unknnownnn003.github.io/infalsus-b50/)
 
-- Reads `savestate_V3.sav` in the current browser and shows ranked B50 cards.
-- Reports B50 Average Rating, B50 Total Rating, parsed charts, and matched charts.
-- Exports an 1800-pixel-wide PNG. A full 50-chart result uses a deterministic 5-column × 10-row layout and is 1800 × 2670 pixels. Shorter results use only the rows they contain; no entries are fabricated.
-- Keeps a detailed score table and unmatched-chart diagnostics available under “详细成绩与诊断”.
-- Exports schemaVersion 2 JSON with score results, diagnostics, and resolved presentation metadata.
-- Allows an optional display name for the current PNG and JSON export. It is held only in page state and is not saved or uploaded.
+## Use it
+
+1. Open the site and select or drop your `savestate_V3.sav` file.
+2. Review the ranked B50 cards, average and total Rating, and detailed score diagnostics.
+3. Export the result as a PNG image or JSON file.
+
+The save is usually located at:
+
+```text
+%USERPROFILE%\AppData\LocalLow\lowiro\infalsus\<SteamID64>\release\savestate_V3.sav
+```
+
+Replace `<SteamID64>` with the account folder on your computer. The path above is a template and contains no real account ID.
 
 ## Privacy
 
-The selected save is parsed locally in the browser. Save bytes are never uploaded or sent to a remote API. The app has no backend, account system, analytics, or telemetry. Jacket images are same-origin static files, so PNG rendering does not depend on a third-party image host or cross-origin canvas access.
+The save is parsed locally in your browser and is never uploaded or sent to a server or remote API. The site has no backend, account system, analytics, or telemetry. The optional display name for exports remains in the current page and is not saved or uploaded.
 
-## Rating rule
+## Rating
 
-For constant C and In Falsus score S, the current project convention adapts the Arcaea single-chart Play Rating formula to the In Falsus score scale ×10, then multiplies the result by 10:
+The calculation follows the shape of Arcaea's single-chart Play Rating formula, adapted to In Falsus's score scale (10×) and with the final Rating displayed at a 10× scale. This is the project's calculation convention, not a claim about a Rating shown by the game. The chart's source `Rating` supplies the formula constant; its display level is kept separate.
 
-- S ≥ 100,000,000: 10 × (C + 2)
-- 98,000,000 ≤ S < 100,000,000: 10 × (C + 1 + (S − 98,000,000) / 2,000,000)
-- S < 98,000,000: 10 × max(C + (S − 95,000,000) / 3,000,000, 0)
+For chart constant `C` and In Falsus score `S`:
 
-This is the project's calculation convention, not a claim that the game itself displays this Rating. The save parser and Rating/B50 calculation were established in Phase 1 and remain separate from the rendering layer.
+- `S ≥ 100,000,000`: `10 × (C + 2)`
+- `98,000,000 ≤ S < 100,000,000`: `10 × (C + 1 + (S − 98,000,000) / 2,000,000)`
+- `S < 98,000,000`: `10 × max(C + (S − 95,000,000) / 3,000,000, 0)`
 
-## Game metadata and jackets
+Scores of 100,000,000 or higher are capped at `10 × (C + 2)`.
 
-The primary maintenance-time metadata source is the current local In Falsus installation, opened read-only. A maintenance extractor generates `src/catalog/songlist.json` and 320×320 WebP jacket thumbnails in `public/assets/jackets/`. The current generated snapshot contains 78 songs and 303 chart rows, of which 300 are available. Unavailable tutorial metadata remains marked as such and is not used for B50 lookup.
+## Catalog and artwork
 
-The generated contract keeps `songId + difficultyIndex` for save lookup and `chartId` for cross-project identity. Game `Rating` feeds the B50 formula; `LevelSectionIndicator` remains an independent display field. Rhythm Archive is used for read-only comparison and web-ecosystem linking, not as a runtime or correctness dependency. The app and GitHub Pages build do not fetch the game installation or Rhythm Archive.
+The repository includes a compact song and chart catalog plus 320×320 WebP jacket thumbnails. A maintenance-time extractor generates these files from a locally installed copy of In Falsus. The browser app uses only the committed static snapshot; it does not access the game installation.
 
-To verify or refresh local generated data, install the maintenance-only Python dependencies, then run:
+Game names and artwork remain the property of their respective rights holders. The snapshot and thumbnails are provided for identifying charts in this tool; this project does not claim ownership of, or grant a license to reuse, the game artwork. This is an unofficial community tool and is not affiliated with or endorsed by the rights holders.
 
-```text
-python -m pip install -r scripts/requirements-game-catalog.txt
-npm run catalog:check -- --game-root <path-to-In-Falsus-installation>
-npm run catalog:update -- --game-root <path-to-In-Falsus-installation>
-```
+Third-party software notices and required MIT attributions are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-`catalog:check` reads the current installation twice into separate marked directories under `.local/game-catalog/`, compares deterministic songlist/manifest/WebP outputs, then checks the committed snapshot. It does not write generated repository files. `catalog:update` stages and validates the songlist, manifest, and jacket set before replacing the generated outputs; a failed update rolls back the prior snapshot. `catalog:generate` remains an alias for this explicit update operation.
+## Maintainers
 
-To compare against a local Rhythm Archive Catalog export:
+The static GitHub Pages build uses the committed catalog and does not need a game installation, secrets, or a backend. Local catalog updates and reproducibility checks use the maintenance-only extractor:
 
 ```text
-npm run catalog:diff -- --rhythm-archive-catalog <path-to-rhythm-assets-gallery-v2/catalog/index.json>
-```
-
-The game installation is a maintenance-time read-only input. The extractor performs no application-initiated writes to it. Windows may update filesystem metadata such as access time as a consequence of normal reads; that operating-system behavior is outside this guarantee. No output, cache, or temporary file is created in the game directory. Generated-output writes resolve under this project, and unsafe or ambiguous targets fail closed. The browser build does not need Python, UnityPy, Pillow, a game installation, or a Rhythm Archive checkout.
-
-`src/catalog/generated-manifest.json` binds the source fingerprint to the exact `songlist.json` bytes and each generated jacket's SHA-256 and byte count. It contains no timestamp or machine path. Jacket output is 320×320 WebP using the pinned UnityPy/Pillow dependencies, Lanczos center-fit, lossy quality 90, method 6, exact RGBA handling, and stripped EXIF/ICC/XMP metadata. The manifest records UnityPy/Pillow/WebP versions as provenance; `catalog:check` verifies them and byte-for-byte repeatability in the installed environment.
-
-## Local development
-
-```text
-npm install
-npm run dev
+npm ci
 npm test
 npm run test:extractor
+npm run catalog:snapshot:check
+npm run catalog:check -- --game-root <path-to-In-Falsus-installation>
 npm run typecheck
 npm run build
 ```
 
-`npm run test:extractor` runs focused Python checks for source validation, write-path safety, content-only fingerprints, deterministic ordering, WebP output, and Addressables path resolution. The maintenance-only dependencies are pinned in `scripts/requirements-game-catalog.txt`.
-
-The production base path is `/infalsus-b50/`. The GitHub Pages workflow builds a static artifact; it does not need secrets or a backend.
-
-## Attribution and rights
-
-The public SaveData Parser and InFalsus-Resource repositories provide MIT-licensed structural and metadata references; their notices are preserved in `THIRD_PARTY_NOTICES.md`. The maintenance extractor uses UnityPy and Pillow as non-vendored Python dependencies. Game names and jacket artwork remain the property of their respective rights holders. The small jacket thumbnails identify charts in the B50 interface and export; this project does not claim or grant rights to reuse the artwork elsewhere. This is an unofficial community tool and is not affiliated with the rights holders.
+`catalog:check` reads the local installation twice and compares deterministic outputs with the committed snapshot. It does not update generated files. See [docs/architecture.md](docs/architecture.md) and [docs/data-contract.md](docs/data-contract.md) for implementation details.

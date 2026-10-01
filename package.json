@@ -11,6 +11,7 @@
     "catalog:generate": "node scripts/generate-game-catalog.mjs --update",
     "catalog:update": "node scripts/generate-game-catalog.mjs --update",
     "catalog:check": "node scripts/generate-game-catalog.mjs --check --require-complete-jackets",
+    "catalog:snapshot:check": "node scripts/verify-catalog-snapshot.mjs",
     "catalog:diff": "node scripts/compare-ra-catalog.mjs",
     "test": "vitest run",
     "test:extractor": "python -B -m unittest discover -s tests -p test_game_catalog_extractor.py"

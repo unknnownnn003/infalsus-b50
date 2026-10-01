@@ -3,7 +3,7 @@ name: Deploy GitHub Pages
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 permissions:
@@ -32,8 +32,25 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Run extractor tests
+        run: npm run test:extractor
+
+      - name: Verify committed catalog snapshot
+        run: npm run catalog:snapshot:check
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Build static site
         run: npm run build

@@ -1,12 +1,12 @@
 {
   "name": "infalsus-b50",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "npm run typecheck && vite build",
-    "preview": "vite preview --base=/infalsus-b50/",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "catalog:generate": "node scripts/generate-game-catalog.mjs --update",
     "catalog:update": "node scripts/generate-game-catalog.mjs --update",
@@ -14,7 +14,8 @@
     "catalog:snapshot:check": "node scripts/verify-catalog-snapshot.mjs",
     "catalog:diff": "node scripts/compare-ra-catalog.mjs",
     "test": "vitest run",
-    "test:extractor": "python -B -m unittest discover -s tests -p test_game_catalog_extractor.py"
+    "test:extractor": "python -B -m unittest discover -s tests -p test_game_catalog_extractor.py",
+    "release:package": "python -B scripts/package-local-release.py"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

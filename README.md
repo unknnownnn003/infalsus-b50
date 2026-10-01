@@ -4,6 +4,15 @@ In Falsus B50 reads a save file in your browser, calculates the Best 50 chart re
 
 [Open In Falsus B50](https://unknnownnn003.github.io/infalsus-b50/)
 
+## Download and run locally
+
+Each published GitHub Release includes a portable `.zip` package. Download the package from the [Releases page](https://github.com/unknnownnn003/infalsus-b50/releases) and extract it. Python 3.7 or later is required to start the local static server; Node.js and an In Falsus installation are not required.
+
+- On Windows, double-click `run-local.cmd`.
+- On macOS or Linux, run `./run-local.sh` from the extracted folder.
+
+The launcher prints a `http://127.0.0.1` address. Open it in your browser and keep the terminal open while using the app; press `Ctrl+C` in that terminal to stop the server. The package works offline after download. Its server only serves the bundled static files on your computer; the selected save stays in the browser and is never uploaded.
+
 ## Use it
 
 1. Open the site and select or drop your `savestate_V3.sav` file.
@@ -57,3 +66,5 @@ npm run build
 ```
 
 `catalog:check` reads the local installation twice and compares deterministic outputs with the committed snapshot. It does not update generated files. See [docs/architecture.md](docs/architecture.md) and [docs/data-contract.md](docs/data-contract.md) for implementation details.
+
+To prepare the portable package after a successful build, run `npm run release:package -- --tag v0.2.0`. It writes the `.zip` and a SHA-256 checksum under `.local/release/`. The release workflow runs the project checks, builds the app, and publishes those files when a matching `v*` tag is pushed or the workflow is run manually. The tag must match the version in `package.json`.

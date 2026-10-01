@@ -1,0 +1,14 @@
+In Falsus B50 portable package
+
+Start the local server:
+
+- Windows: double-click run-local.cmd.
+- macOS or Linux: run ./run-local.sh from this folder.
+
+Python 3.7 or later is required. Node.js and the game installation are not required.
+The launcher prints a URL beginning with http://127.0.0.1. Open that address
+in your browser. Keep the terminal open while using the app; press Ctrl+C to
+stop the server. The package works offline after download.
+
+The server binds to this computer only and serves the bundled static files.
+Save files are selected and parsed in your browser and are never uploaded.

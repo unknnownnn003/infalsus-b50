@@ -65,9 +65,25 @@ function drawHeader(context: CanvasRenderingContext2D, model: B50RenderModel, wi
   context.fillStyle = PALETTE.text;
   context.fillText("BEST 50", 62, 132);
   if (model.playerName) {
-    context.font = "550 22px system-ui, sans-serif";
-    context.fillStyle = PALETTE.secondary;
-    context.fillText(model.playerName, 66, 176, width - 130);
+    const titleWidth = context.measureText("BEST 50").width;
+    const badgeX = 62 + titleWidth + 28;
+    const badgeMaxWidth = width - badgeX - 48;
+    context.font = "750 28px system-ui, sans-serif";
+    const badgeWidth = Math.min(badgeMaxWidth, context.measureText(model.playerName).width + 48);
+    if (badgeWidth > 72) {
+      roundedRect(context, badgeX, 105, badgeWidth, 54, 10);
+      context.fillStyle = "#2b2027";
+      context.fill();
+      context.strokeStyle = PALETTE.accent;
+      context.lineWidth = 1.5;
+      context.stroke();
+      context.fillStyle = PALETTE.accent;
+      context.fillRect(badgeX + 14, 117, 3, 30);
+      context.textAlign = "left";
+      context.font = "750 28px system-ui, sans-serif";
+      context.fillStyle = PALETTE.text;
+      context.fillText(model.playerName, badgeX + 28, 132, badgeWidth - 42);
+    }
   }
 
   const labels = ["B50 AVERAGE POTENTIAL", "B30 AVERAGE POTENTIAL", "B10 AVERAGE POTENTIAL", "OVERALL POTENTIAL"];

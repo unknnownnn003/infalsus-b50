@@ -212,14 +212,13 @@ code { color: #e7dce3; font-family: ui-monospace, "Cascadia Code", Consolas, mon
 .button-primary:hover:not(:disabled) { background: #ff8582; }
 .button-secondary { color: var(--ash); border-color: var(--edge); background: transparent; }
 .button-secondary:hover:not(:disabled) { color: var(--chalk); border-color: rgba(238, 221, 232, .28); background: var(--surface-raised); }
-.button-download { color: var(--chalk); border-color: rgba(243, 109, 112, .45); background: #2b2027; text-decoration: none; }
-.button-download:hover { border-color: var(--scarlet); background: #35242c; }
 .button:disabled { opacity: .42; cursor: not-allowed; }
 .button-arrow { font-size: 15px; line-height: 1; }
-.button-ghost { min-height: 30px; padding: 0 10px; color: var(--ash); border-color: var(--edge); background: transparent; font-size: 11px; font-weight: 650; }
+.button-ghost { min-height: 40px; padding: 0 10px; color: var(--ash); border-color: var(--edge); background: transparent; font-size: 11px; font-weight: 650; }
 .button-ghost:hover:not(:disabled) { color: var(--chalk); border-color: rgba(238, 221, 232, .28); background: var(--surface-raised); }
 .save-path { margin-top: 11px; padding: 12px 15px 13px; border: 1px solid var(--edge-soft); border-radius: 8px; background: var(--surface-inset); }
 .save-path-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.save-path-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .save-path-label { color: var(--ash); font-size: 11px; font-weight: 700; }
 .save-path-value {
   display: block;
@@ -234,6 +233,7 @@ code { color: #e7dce3; font-family: ui-monospace, "Cascadia Code", Consolas, mon
   line-height: 1.5;
   white-space: nowrap;
 }
+.save-path-value + .save-path-value { margin-top: 6px; }
 .save-path-help { margin: 9px 0 0; color: var(--dust); font-size: 11px; line-height: 1.65; }
 .import-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 2px 0; }
 .privacy-note, .status { margin: 0; color: var(--dust); font-size: 11px; line-height: 1.5; }
@@ -498,7 +498,6 @@ tbody tr:hover { background: rgba(255,255,255,.025); }
   .name-field input { min-height: 42px; }
   .export-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .export-actions .button { width: 100%; justify-content: center; }
-  .export-actions .button-download { grid-column: 1 / -1; }
   .stats-band { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat { min-height: 76px; padding: 11px 12px; }
   .stat-label { font-size: 8px; }

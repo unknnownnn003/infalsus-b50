@@ -16,7 +16,6 @@ const status = getElement<HTMLParagraphElement>("status");
 const resultsSection = getElement<HTMLElement>("results");
 const pngButton = getElement<HTMLButtonElement>("export-png-button");
 const jsonButton = getElement<HTMLButtonElement>("export-json-button");
-const pngDownloadLink = getElement<HTMLAnchorElement>("png-download-link");
 const playerNameInput = getElement<HTMLInputElement>("player-name");
 const exportStatus = getElement<HTMLParagraphElement>("export-status");
 const cardGrid = getElement<HTMLDivElement>("b50-cards");
@@ -24,14 +23,15 @@ const tableBody = getElement<HTMLTableSectionElement>("table-body");
 const diagnosticsSection = getElement<HTMLDivElement>("diagnostics");
 const diagnosticList = getElement<HTMLUListElement>("diagnostic-list");
 const copyPathButton = getElement<HTMLButtonElement>("copy-path-button");
+const copyDirectoryButton = getElement<HTMLButtonElement>("copy-directory-button");
+const saveDirectoryValue = getElement<HTMLElement>("save-directory-value");
 const savePathValue = getElement<HTMLElement>("save-path-value");
 
 let currentResult: B50Result | null = null;
 let fileRequestSequence = 0;
 let pngRenderSequence = 0;
 let activePngRenderSequence: number | null = null;
-let pngObjectUrl: string | null = null;
-let copyPathResetTimer: number | null = null;
+const copyPathResetTimers = new WeakMap<HTMLButtonElement, number>();
 
 function getElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -193,7 +193,6 @@ function renderDiagnostics(result: B50Result): void {
 }
 
 function renderResult(result: B50Result): void {
-  clearPngDownload();
   const model = buildB50RenderModel(result, catalog);
   getElement<HTMLElement>("unmatched-count").textContent = formatInteger(result.unmatchedScores);
   getElement<HTMLElement>("b50-count").textContent = formatInteger(model.entries.length);
@@ -211,7 +210,6 @@ function renderResult(result: B50Result): void {
 }
 
 function showError(message: string): void {
-  clearPngDownload();
   currentResult = null;
   resultsSection.hidden = true;
   status.textContent = message;
@@ -220,20 +218,21 @@ function showError(message: string): void {
   jsonButton.disabled = true;
 }
 
-async function copySavePath(): Promise<void> {
-  const path = savePathValue.textContent ?? "";
+async function copyPath(button: HTMLButtonElement, path: string, defaultLabel: string): Promise<void> {
   let label = "已复制";
   try {
     await navigator.clipboard.writeText(path);
   } catch {
-    label = "请手动选中复制";
+    label = "请手动复制";
   }
-  copyPathButton.textContent = label;
-  if (copyPathResetTimer !== null) window.clearTimeout(copyPathResetTimer);
-  copyPathResetTimer = window.setTimeout(() => {
-    copyPathButton.textContent = "复制路径";
-    copyPathResetTimer = null;
+  button.textContent = label;
+  const previousTimer = copyPathResetTimers.get(button);
+  if (previousTimer !== undefined) window.clearTimeout(previousTimer);
+  const resetTimer = window.setTimeout(() => {
+    button.textContent = defaultLabel;
+    copyPathResetTimers.delete(button);
   }, 2200);
+  copyPathResetTimers.set(button, resetTimer);
 }
 
 async function processFile(file: File | undefined): Promise<void> {
@@ -241,7 +240,6 @@ async function processFile(file: File | undefined): Promise<void> {
   const requestSequence = ++fileRequestSequence;
   pngRenderSequence += 1;
   activePngRenderSequence = null;
-  clearPngDownload();
   if (!file.name.toLowerCase().endsWith(".sav")) {
     showError("这个文件不是 .sav，请选择 savestate_V3.sav。");
     fileInput.value = "";
@@ -306,7 +304,6 @@ async function exportPng(): Promise<void> {
   const model = buildB50RenderModel(sourceResult, catalog, { playerName: sourcePlayerName });
   const exportSequence = ++pngRenderSequence;
   activePngRenderSequence = exportSequence;
-  clearPngDownload();
   pngButton.disabled = true;
   exportStatus.textContent = "正在加载曲绘并绘制图片…";
   try {
@@ -318,10 +315,8 @@ async function exportPng(): Promise<void> {
       || currentResult !== sourceResult
       || playerNameInput.value !== sourcePlayerName
     ) return;
-    pngObjectUrl = URL.createObjectURL(rendered.blob);
-    pngDownloadLink.href = pngObjectUrl;
-    pngDownloadLink.hidden = false;
-    exportStatus.textContent = "图片已生成，尺寸 " + rendered.width + " × " + rendered.height + "；点“保存 PNG”下载。";
+    downloadBlob(rendered.blob, "in-falsus-b50.png");
+    exportStatus.textContent = "PNG 已开始下载，尺寸 " + rendered.width + " × " + rendered.height + "。";
   } catch (error) {
     if (
       exportSequence !== pngRenderSequence
@@ -337,13 +332,6 @@ async function exportPng(): Promise<void> {
       pngButton.disabled = resultsSection.hidden || currentResult?.entries.length === 0 || currentResult === null;
     }
   }
-}
-
-function clearPngDownload(): void {
-  if (pngObjectUrl !== null) URL.revokeObjectURL(pngObjectUrl);
-  pngObjectUrl = null;
-  pngDownloadLink.removeAttribute("href");
-  pngDownloadLink.hidden = true;
 }
 
 function exportJson(): void {
@@ -395,16 +383,23 @@ dropZone.addEventListener("drop", (event: DragEvent) => {
 });
 pngButton.addEventListener("click", () => void exportPng());
 jsonButton.addEventListener("click", exportJson);
-copyPathButton.addEventListener("click", () => void copySavePath());
+copyPathButton.addEventListener("click", () => void copyPath(
+  copyPathButton,
+  savePathValue.textContent ?? "",
+  "复制文件路径",
+));
+copyDirectoryButton.addEventListener("click", () => void copyPath(
+  copyDirectoryButton,
+  saveDirectoryValue.textContent ?? "",
+  "复制目录路径",
+));
 playerNameInput.addEventListener("input", () => {
   if (activePngRenderSequence !== null) {
     pngRenderSequence += 1;
     activePngRenderSequence = null;
     exportStatus.textContent = "名字改了，需要重新生成图片。";
     pngButton.disabled = resultsSection.hidden || currentResult?.entries.length === 0 || currentResult === null;
-  }
-  if (pngObjectUrl !== null) {
-    clearPngDownload();
-    exportStatus.textContent = "名字改了，需要重新生成图片。";
+  } else if (exportStatus.textContent.startsWith("PNG 已")) {
+    exportStatus.textContent = "名字已更新；再次点击“下载 PNG”会使用新名字。";
   }
 });

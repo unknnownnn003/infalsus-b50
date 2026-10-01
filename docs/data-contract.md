@@ -54,6 +54,8 @@ Jacket references come from the game's jacket Material mapping. Each selected `_
 
 If no semantic game version is present in the installed data, `gameVersion` stays absent. `gameDataCommitId`, `steamBuildId`, `addressablesVersion`, and `fingerprint` identify the observed input without storing an absolute path, timestamp, or machine identifier.
 
+`src/catalog/generated-manifest.json` is the generated-output integrity record. Schema version 1 stores `sourceFingerprint`, the SHA-256 and byte count of `songlist.json`, UnityPy/Pillow/WebP encoder provenance, and a sorted filename map of each jacket's SHA-256 and byte count. It contains no generated time or machine path. `catalog:check` verifies the manifest against the committed files and against two fresh runs from the same game installation; `catalog:update` is the explicit operation that replaces the snapshot.
+
 ## Runtime catalog adapter
 
 The catalog loader indexes only charts with `available: true`. It maps game `rating` to the existing internal `constant` property consumed by the frozen Rating formula. The loader carries `levelIndicator` separately. Chart identity indexes remain `songId:difficultyIndex` and `chartId`.

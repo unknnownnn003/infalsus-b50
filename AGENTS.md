@@ -5,7 +5,7 @@
 - This is a pure-front-end In Falsus B50 tool intended for GitHub Pages.
 - Save files are processed only in the user's browser. Never upload save files or send them to any server or remote API.
 - Do not create a backend.
-- The current local In Falsus installation is the primary maintenance-time source for song/chart metadata and jacket thumbnails. Treat the installation as strictly read-only.
+- The current local In Falsus installation is the primary maintenance-time source for song/chart metadata and jacket thumbnails. The extractor performs no application-initiated writes to the installation.
 - B50 owns player score data, catalog normalization, and Rating/B50 calculation. It does not extract chart payloads or game resources beyond the metadata and jacket thumbnail inputs needed by B50.
 - Rhythm Archive is a cross-check and a related-project contract, not a runtime or correctness dependency.
 - Keep runtime independent of both the game installation and Rhythm Archive. Commit a compact generated snapshot and static thumbnails.
@@ -21,12 +21,14 @@
 
 ## Read-only game extraction
 
-- Default source: the user's installed In Falsus game directory. Open files for reading only; do not change content, attributes, timestamps, Steam files, or saves.
-- On Windows, check that the NTFS Last Access Time policy is disabled and has been active since system boot before reading game files. The extractor refuses when updates are enabled, the policy changed after boot, or the state cannot be verified; it never changes Windows settings.
+- Default source: the user's installed In Falsus game directory. Open files for reading only; never initiate writes, content or attribute changes, ACL/owner changes, renames, deletions, or timestamp changes in the installation. Never restore access times with `utime` or a similar API.
+- Windows may update filesystem metadata such as access time as a consequence of normal reads. That operating-system behavior is outside the extractor's no-application-writes guarantee. Do not inspect or change the NTFS Last Access Time policy as a prerequisite for extraction.
 - Never create files, caches, unpacked output, or temporary images inside the game directory.
-- Use only `.local/game-catalog/` as temporary extractor output and remove it when a run finishes. The committed outputs are `src/catalog/songlist.json` and 320×320 WebP jackets under `public/assets/jackets/`.
+- Use only `.local/game-catalog/` as temporary extractor output and remove it when a run finishes. `catalog:check` generates two marked runs there and compares them without writing formal outputs. `catalog:update` stages, validates, and replaces the committed outputs with rollback on failure. The committed outputs are `src/catalog/songlist.json`, `src/catalog/generated-manifest.json`, and 320×320 WebP jackets under `public/assets/jackets/`.
+- Resolve every write target and fail closed unless it is inside the project root and outside the resolved game installation. Keep game source paths separate from project temporary and generated-output paths.
 - Do not extract or commit `.spc`, audio/video, original textures/images, AssetBundles, fonts, UI assets, character artwork, or other game resources.
 - Do not add a semantic game version from guesswork. Record only identifiers read from the installation, such as `SongData.CommitId`, an installed Steam build ID, and a content-derived fingerprint.
+- Generated song and chart arrays, JSON encoding, WebP dimensions/resize/encoding settings, and metadata stripping must remain deterministic. Never include absolute paths or filesystem timestamps in the content fingerprint or generated snapshot.
 
 ## Repository hygiene
 

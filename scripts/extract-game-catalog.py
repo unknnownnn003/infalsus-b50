@@ -1,16 +1,16 @@
 """Read current In Falsus Addressables data and emit a temporary B50 source snapshot.
 
-The game installation is opened read-only. This tool writes only to the explicit
-temporary output directory inside the B50 project. It decodes jackets in memory
-and writes only 320x320 WebP derivatives; it never exports an original texture.
+The game installation is a read-only input: this tool initiates no writes there.
+It writes only to an explicitly marked temporary directory inside the B50 project.
+It decodes jackets in memory and writes only 320x320 WebP derivatives; it never
+exports an original texture. Operating-system access-time updates from normal
+reads are outside this application-level guarantee.
 """
 
 from __future__ import annotations
 
 import argparse
-import ctypes
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 import json
 import math
@@ -23,7 +23,7 @@ from typing import Any, Iterable
 
 try:
     import UnityPy
-    from PIL import Image, ImageOps
+    from PIL import Image, ImageOps, features
 except ImportError as exc:  # pragma: no cover - depends on maintenance environment
     raise SystemExit("The game extractor requires UnityPy and Pillow; install scripts/requirements-game-catalog.txt.") from exc
 
@@ -35,6 +35,10 @@ CLEAR_FLAGS_MASK = 0x3FFFFFFF
 CATALOG_MAGIC = 0x0DE38942
 DIFFICULTIES = {1: (0, "MIN"), 2: (1, "EVO"), 4: (2, "ULT"), 8: (3, "FBD")}
 APP_ID = "3971950"
+PROJECT_ROOT = Path(__file__).resolve(strict=True).parents[1]
+TEMP_ROOT = PROJECT_ROOT / ".local" / "game-catalog"
+SCRATCH_MARKER_NAME = ".b50-game-extractor-owned"
+SCRATCH_MARKER_VALUE = "infalsus-b50-game-extraction-v1\n"
 
 
 class CatalogFormatError(ValueError):
@@ -310,6 +314,39 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _content_fingerprint(inputs: dict[str, Path | bytes]) -> str:
+    """Hash named input content; filesystem paths and metadata never enter identity."""
+    if not inputs or any(not isinstance(name, str) or not name for name in inputs):
+        raise ExtractionError("content fingerprint inputs must have stable non-empty logical names")
+    content_hashes = {
+        name: sha256(value if isinstance(value, bytes) else Path(value).read_bytes()).hexdigest()
+        for name, value in sorted(inputs.items())
+    }
+    payload = json.dumps(content_hashes, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
+    return sha256(payload).hexdigest()
+
+
+def _resolve_write_target(
+    target: Path,
+    project_root: Path = PROJECT_ROOT,
+    game_roots: Iterable[Path] = (),
+) -> Path:
+    """Resolve every extractor write through the project boundary and reject the source tree."""
+    try:
+        project = project_root.resolve(strict=True)
+        resolved = target.resolve(strict=False)
+        resolved.relative_to(project)
+        if resolved == project:
+            raise ValueError("write target resolves to the project root itself")
+        for game_root in game_roots:
+            game = game_root.resolve(strict=True)
+            if resolved == game or game in resolved.parents:
+                raise ValueError("write target resolves to the read-only game installation")
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ExtractionError(f"write target is outside the safe project output boundary: {target}") from exc
+    return resolved
+
+
 def _safe_child(root: Path, name: str) -> Path:
     if Path(name).name != name or not name.lower().endswith(".bundle"):
         raise ExtractionError(f"unsafe bundle name in the Addressables catalog: {name!r}")
@@ -473,7 +510,17 @@ def _build_jacket_maps(song_data: dict[str, Any]) -> tuple[dict[int, str], dict[
     return by_song, by_chart
 
 
-def _write_webp(image: Any, destination: Path) -> dict[str, Any]:
+def _write_webp(
+    image: Any,
+    destination: Path,
+    game_roots: Iterable[Path] = (),
+    project_root: Path = PROJECT_ROOT,
+) -> dict[str, Any]:
+    if destination.is_symlink():
+        raise ExtractionError("refusing to write through a jacket scratch symlink")
+    destination = _resolve_write_target(destination, project_root, game_roots)
+    if destination.exists() or destination.is_symlink():
+        raise ExtractionError("refusing to overwrite an existing jacket scratch file")
     rgba = image.convert("RGBA")
     pixel_hash = sha256(rgba.tobytes()).hexdigest()
     key_payload = f"{rgba.width}x{rgba.height}:{pixel_hash}".encode("ascii")
@@ -484,7 +531,18 @@ def _write_webp(image: Any, destination: Path) -> dict[str, Any]:
         method=Image.Resampling.LANCZOS,
         centering=(0.5, 0.5),
     )
-    target.save(destination, format="WEBP", quality=90, method=6, exact=True)
+    target.save(
+        destination,
+        format="WEBP",
+        quality=90,
+        lossless=False,
+        method=6,
+        exact=True,
+        alpha_quality=100,
+        icc_profile=b"",
+        exif=b"",
+        xmp=b"",
+    )
     content = destination.read_bytes()
     if content[:4] != b"RIFF" or content[8:12] != b"WEBP":
         raise ExtractionError("Pillow did not produce a WebP jacket thumbnail")
@@ -528,75 +586,23 @@ def _steam_build_id(install_root: Path) -> str | None:
     return None
 
 
-def _require_last_access_updates_disabled() -> None:
-    """Fail before game-file access if Windows may update LastAccessTime on reads."""
-    if os.name != "nt":
-        return
-    try:
-        import winreg
-
-        with winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
-            r"SYSTEM\CurrentControlSet\Control\FileSystem",
-            0,
-            winreg.KEY_READ,
-        ) as key:
-            value, value_type = winreg.QueryValueEx(key, "NtfsDisableLastAccessUpdate")
-            key_last_write = winreg.QueryInfoKey(key)[2]
-    except (ImportError, OSError) as exc:
-        raise ExtractionError(
-            "cannot verify the Windows Last Access Time policy; refusing to read the game installation"
-        ) from exc
-    if value_type != winreg.REG_DWORD:
-        raise ExtractionError(
-            "the Windows Last Access Time policy is not a REG_DWORD; refusing to read the game installation"
-        )
-    if value not in (1, 3):
-        raise ExtractionError(
-            "Windows Last Access Time updates are enabled or system-managed; refusing to read game files "
-            "because the operating system may change their access timestamps"
-        )
-    try:
-        get_tick_count = ctypes.windll.kernel32.GetTickCount64
-        get_tick_count.restype = ctypes.c_ulonglong
-        uptime_ms = int(get_tick_count())
-        if uptime_ms <= 0:
-            raise OSError("GetTickCount64 returned an invalid uptime")
-        boot_time = datetime.now(timezone.utc) - timedelta(milliseconds=uptime_ms)
-        registry_epoch = datetime(1601, 1, 1, tzinfo=timezone.utc)
-        registry_last_write = registry_epoch + timedelta(microseconds=int(key_last_write) // 10)
-    except (AttributeError, OSError, OverflowError, TypeError, ValueError) as exc:
-        raise ExtractionError(
-            "cannot verify that the disabled Last Access Time policy was active at system boot; refusing to read the game installation"
-        ) from exc
-    if registry_last_write >= boot_time - timedelta(seconds=2):
-        raise ExtractionError(
-            "the Last Access Time policy changed after system boot or is too close to boot to verify; "
-            "restart Windows before reading the game installation"
-        )
-
-
-def _validate_output_root(output_root: Path, project_root: Path) -> Path:
-    local_root = project_root / ".local"
-    expected = local_root / "game-catalog"
+def _validate_output_root(output_root: Path, game_roots: Iterable[Path]) -> Path:
+    local_root = PROJECT_ROOT / ".local"
     if local_root.is_symlink() or not local_root.is_dir():
         raise ExtractionError("the .local directory must be a regular project directory")
-    if output_root.is_symlink() or expected.is_symlink():
+    if output_root.is_symlink() or TEMP_ROOT.is_symlink():
         raise ExtractionError("the temporary output directory cannot be a symbolic link")
     requested_absolute = Path(os.path.abspath(output_root))
-    expected_absolute = Path(os.path.abspath(expected))
-    if os.path.normcase(str(requested_absolute)) != os.path.normcase(str(expected_absolute)):
-        raise ExtractionError("temporary extraction output must be exactly the ignored .local/game-catalog directory")
-    try:
-        output_root.relative_to(project_root)
-    except ValueError as exc:
-        raise ExtractionError("temporary extraction output must stay inside the B50 project") from exc
+    allowed = {Path(os.path.abspath(TEMP_ROOT / "run-a")), Path(os.path.abspath(TEMP_ROOT / "run-b")), Path(os.path.abspath(TEMP_ROOT / "update"))}
+    if os.path.normcase(str(requested_absolute)) not in {os.path.normcase(str(path)) for path in allowed}:
+        raise ExtractionError("temporary extraction output must be a managed run directory under .local/game-catalog")
+    output_root = _resolve_write_target(output_root, game_roots=game_roots)
     if not output_root.is_dir():
         raise ExtractionError("the extractor output directory must be created by the B50 generator")
-    marker = output_root / ".b50-game-extractor-owned"
+    marker = output_root / SCRATCH_MARKER_NAME
     if marker.is_symlink() or not marker.is_file():
         raise ExtractionError("temporary output is missing its B50 ownership marker")
-    if marker.read_text(encoding="utf-8") != "infalsus-b50-game-extraction-v1\n":
+    if marker.read_text(encoding="utf-8") != SCRATCH_MARKER_VALUE:
         raise ExtractionError("temporary output has an unknown ownership marker")
     entries = list(output_root.iterdir())
     if len(entries) != 1 or entries[0].name != marker.name:
@@ -604,22 +610,20 @@ def _validate_output_root(output_root: Path, project_root: Path) -> Path:
     return output_root
 
 
+def _sort_catalog_rows(songs: list[dict[str, Any]]) -> None:
+    for song in songs:
+        song["charts"].sort(key=lambda row: (row["difficultyIndex"], row["chartId"]))
+    songs.sort(key=lambda row: row["songId"])
+
+
 def extract(game_root: Path, output_root: Path) -> dict[str, Any]:
-    project_root = Path(__file__).resolve().parents[1]
-    output_root = _validate_output_root(output_root, project_root)
-    _require_last_access_updates_disabled()
     data_root, install_root = _real_game_data_root(game_root)
+    game_roots = (game_root.resolve(strict=True), data_root, install_root)
+    output_root = _validate_output_root(output_root, game_roots)
     catalog_path = data_root / "StreamingAssets" / "aa" / "catalog.bin"
     settings_path = data_root / "StreamingAssets" / "aa" / "settings.json"
     bundle_root = data_root / "StreamingAssets" / "aa" / "StandaloneWindows64"
     output_root = output_root.resolve(strict=True)
-    try:
-        output_root.relative_to(data_root)
-    except ValueError:
-        pass
-    else:
-        raise ExtractionError("temporary extraction output cannot be inside the read-only game installation")
-
     catalog = BinaryCatalog(catalog_path)
     resolver = UnityBundleResolver(bundle_root, catalog)
     song_location = _find_asset_location(catalog, "release/SongData.asset", "SongData")
@@ -632,19 +636,21 @@ def extract(game_root: Path, output_root: Path) -> dict[str, Any]:
         raise ExtractionError("SongData or DynamicStringMapping did not decode to an object")
 
     jacket_by_song, jacket_by_chart = _build_jacket_maps(song_data)
-    output_jackets = output_root / "jackets"
+    output_jackets = _resolve_write_target(output_root / "jackets", game_roots=game_roots)
     output_jackets.mkdir()
     resolved_jackets = output_jackets.resolve(strict=True)
     if resolved_jackets.parent != output_root.resolve(strict=True):
         raise ExtractionError("jacket scratch directory resolves outside the owned extraction directory")
     image_sources: dict[str, dict[str, Any]] = {}
-    source_hashes: dict[str, str] = {"catalog.bin": _sha256_file(catalog_path)}
+    fingerprint_inputs: dict[str, Path | bytes] = {"catalog.bin": catalog_path}
     image_by_guid: dict[str, str] = {}
     if settings_path.is_file():
-        source_hashes["settings.json"] = _sha256_file(settings_path)
         settings = json.loads(settings_path.read_text(encoding="utf-8"))
     else:
         settings = {}
+    addressables_version = _text(settings.get("m_AddressablesVersion"), "settings.m_AddressablesVersion")
+    if addressables_version:
+        fingerprint_inputs["settings.m_AddressablesVersion"] = addressables_version.encode("utf-8")
 
     title_mapping = mapping_data.get("songIdTitleTypeMapping")
     artist_mapping = mapping_data.get("songIdArtistTypeMapping")
@@ -659,16 +665,16 @@ def extract(game_root: Path, output_root: Path) -> dict[str, Any]:
             return cached_key
         image, bundle_name = _material_image(resolver, catalog, guid)
         bundle_path = _safe_child(bundle_root, bundle_name)
-        source_hashes["bundle:" + bundle_name] = _sha256_file(bundle_path)
-        temporary_path = output_jackets / "pending.webp"
-        source = _write_webp(image, temporary_path)
-        image_path = output_jackets / (source["key"] + ".webp")
+        fingerprint_inputs["bundle:" + bundle_name] = bundle_path
+        temporary_path = _resolve_write_target(output_jackets / "pending.webp", game_roots=game_roots)
+        source = _write_webp(image, temporary_path, game_roots)
+        image_path = _resolve_write_target(output_jackets / (source["key"] + ".webp"), game_roots=game_roots)
         if image_path.exists():
             if _sha256_file(image_path) != source["sha256"]:
                 raise ExtractionError("two jacket sources normalize to the same key but different WebP bytes")
-            temporary_path.unlink()
+            _resolve_write_target(temporary_path, game_roots=game_roots).unlink()
         else:
-            temporary_path.replace(image_path)
+            _resolve_write_target(temporary_path, game_roots=game_roots).replace(image_path)
         image_sources.setdefault(source["key"], source)
         image_by_guid[guid] = source["key"]
         return source["key"]
@@ -757,10 +763,9 @@ def extract(game_root: Path, output_root: Path) -> dict[str, Any]:
             chart_rows += 1
             available_chart_rows += int(available)
 
-        song_row["charts"].sort(key=lambda row: (row["difficultyIndex"], row["chartId"]))
         songs.append(song_row)
 
-    songs.sort(key=lambda row: row["songId"])
+    _sort_catalog_rows(songs)
     if len({row["songId"] for row in songs}) != len(songs):
         raise ExtractionError("SongData contains duplicate non-placeholder songIds")
     if len({chart["chartId"] for row in songs for chart in row["charts"]}) != chart_rows:
@@ -769,10 +774,9 @@ def extract(game_root: Path, output_root: Path) -> dict[str, Any]:
         raise ExtractionError("SongData chart count is inconsistent")
 
     for bundle_name in sorted(resolver.used_bundles):
-        source_hashes["bundle:" + bundle_name] = _sha256_file(_safe_child(bundle_root, bundle_name))
-    # AssetBundle hashes are content hashes; the fingerprint contains no local path or timestamp.
-    fingerprint_input = json.dumps(source_hashes, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
-    fingerprint = sha256(fingerprint_input).hexdigest()
+        fingerprint_inputs["bundle:" + bundle_name] = _safe_child(bundle_root, bundle_name)
+    # The content fingerprint uses only stable logical names and bytes actually read; paths and timestamps are excluded.
+    fingerprint = _content_fingerprint(fingerprint_inputs)
     source: dict[str, Any] = {"fingerprint": fingerprint}
     commit_id = _text(song_data.get("CommitId"), "SongData.CommitId")
     if commit_id:
@@ -780,7 +784,6 @@ def extract(game_root: Path, output_root: Path) -> dict[str, Any]:
     build_id = _steam_build_id(install_root)
     if build_id:
         source["steamBuildId"] = build_id
-    addressables_version = _text(settings.get("m_AddressablesVersion"), "settings.m_AddressablesVersion")
     if addressables_version:
         source["addressablesVersion"] = addressables_version
 
@@ -798,12 +801,18 @@ def extract(game_root: Path, output_root: Path) -> dict[str, Any]:
             "availableCharts": available_chart_rows,
             "jacketImages": len(image_sources),
         },
+        "toolchain": {
+            "unityPy": UnityPy.__version__,
+            "pillow": Image.__version__,
+            "webp": features.version("webp"),
+        },
     }
-    (output_root / "extracted.json").write_text(
-        json.dumps(payload, ensure_ascii=True, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    extracted_path = _resolve_write_target(output_root / "extracted.json", game_roots=game_roots)
+    try:
+        with extracted_path.open("x", encoding="utf-8", newline="\n") as stream:
+            stream.write(json.dumps(payload, ensure_ascii=True, indent=2) + "\n")
+    except FileExistsError as exc:
+        raise ExtractionError("refusing to overwrite an existing extracted snapshot") from exc
     return payload["audit"]
 
 

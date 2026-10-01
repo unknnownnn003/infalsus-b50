@@ -1,8 +1,10 @@
 """Focused tests for fail-closed source validation and Addressables lookup."""
 
 from importlib.util import module_from_spec, spec_from_file_location
+import os
 from pathlib import Path
 import sys
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import unittest
 
@@ -71,6 +73,70 @@ class ExtractorSourceValidationTests(unittest.TestCase):
         self.assertFalse(EXTRACTOR._chart_available("", None, "Available"))
         with self.assertRaises(EXTRACTOR.ExtractionError):
             EXTRACTOR._chart_available("chart0", None, "Available")
+
+    def test_project_write_boundary_allows_project_and_rejects_game_or_traversal(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            game = root / "game"
+            game.mkdir()
+            self.assertEqual(EXTRACTOR._resolve_write_target(root / "tmp" / "out.bin", root, (game,)), root / "tmp" / "out.bin")
+            for target in (game, game / "nested" / "out.bin", root / ".." / "escape.bin"):
+                with self.subTest(target=target):
+                    with self.assertRaises(EXTRACTOR.ExtractionError):
+                        EXTRACTOR._resolve_write_target(target, root, (game,))
+
+    def test_content_fingerprint_ignores_absolute_path_and_file_times(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            left = root / "drive-d" / "metadata.bundle"
+            right = root / "drive-e" / "metadata.bundle"
+            left.parent.mkdir()
+            right.parent.mkdir()
+            left.write_bytes(b"same input bytes")
+            right.write_bytes(b"same input bytes")
+            os.utime(left, ns=(1_000_000_000, 2_000_000_000))
+            os.utime(right, ns=(8_000_000_000, 9_000_000_000))
+            logical_inputs_left = {"bundle:metadata.bundle": left}
+            logical_inputs_right = {"bundle:metadata.bundle": right}
+            self.assertEqual(
+                EXTRACTOR._content_fingerprint(logical_inputs_left),
+                EXTRACTOR._content_fingerprint(logical_inputs_right),
+            )
+            right.write_bytes(b"changed input bytes")
+            self.assertNotEqual(
+                EXTRACTOR._content_fingerprint(logical_inputs_left),
+                EXTRACTOR._content_fingerprint(logical_inputs_right),
+            )
+
+    def test_catalog_rows_have_explicit_song_and_chart_order(self):
+        songs = [
+            {"songId": 9, "charts": [{"difficultyIndex": 3, "chartId": "z"}, {"difficultyIndex": 1, "chartId": "b"}, {"difficultyIndex": 1, "chartId": "a"}]},
+            {"songId": 2, "charts": [{"difficultyIndex": 0, "chartId": "min"}]},
+        ]
+        EXTRACTOR._sort_catalog_rows(songs)
+        self.assertEqual([song["songId"] for song in songs], [2, 9])
+        self.assertEqual(
+            [(chart["difficultyIndex"], chart["chartId"]) for chart in songs[1]["charts"]],
+            [(1, "a"), (1, "b"), (3, "z")],
+        )
+
+    def test_webp_encoding_is_repeatable_and_strips_image_metadata(self):
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            first_path = root / "first.webp"
+            second_path = root / "second.webp"
+            image = EXTRACTOR.Image.new("RGBA", (480, 360))
+            pixels = image.load()
+            for y in range(image.height):
+                for x in range(image.width):
+                    pixels[x, y] = (x % 256, y % 256, (x * 17 + y * 31) % 256, 255)
+            first = EXTRACTOR._write_webp(image, first_path, project_root=root)
+            second = EXTRACTOR._write_webp(image, second_path, project_root=root)
+            self.assertEqual(first["sha256"], second["sha256"])
+            self.assertEqual(first_path.read_bytes(), second_path.read_bytes())
+            with EXTRACTOR.Image.open(first_path) as encoded:
+                self.assertEqual(encoded.size, (320, 320))
+                self.assertEqual(encoded.getexif(), {})
 
 
 class AddressablesResolutionTests(unittest.TestCase):

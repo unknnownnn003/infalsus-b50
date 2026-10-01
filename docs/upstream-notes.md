@@ -12,6 +12,8 @@ Both REDDRAGON-HL repositories declare MIT. Their notices remain in `THIRD_PARTY
 
 The current installation uses Unity Addressables under `StreamingAssets/aa`, with a binary v2 catalog, Addressables package 2.9.1, and 1,810 local `.bundle` files. The game executable reports Unity 6000.3.9f1; that is the engine version, not a reliable game product version. The installed Steam manifest provides build ID 25594228, and `SongData.CommitId` is `007d2f885f0fd931ce7621030ff08311fb74f13b`. The generated snapshot records those identifiers and a content-derived fingerprint; it does not invent a semantic `gameVersion`.
 
+Phase 2.1 changed the fingerprint from `873b4521d859557bca125e6ecbeaacbd08c1d16e1097a770e2bd9f8f3ce04845` to `a2a13cea6bb887ea2bc262b610530d7c22e574bf341fd8c29fee4d77192a12d4`. The installation identifiers and generated song/chart/jacket content remained unchanged; the difference comes from narrowing the fingerprint input from all of `settings.json` to its consumed `m_AddressablesVersion` value. The fingerprint uses content hashes for `catalog.bin` and selected metadata/jacket bundles, keyed by stable logical names; paths, timestamps, and toolchain version are excluded. `generated-manifest.json` separately records output hashes and UnityPy/Pillow/WebP encoder provenance.
+
 `SongData` contains 90 slots. Twelve have empty `songId=0` placeholder data and are skipped. The remaining 78 song IDs yield 303 non-empty chart rows: 300 available and 3 unavailable tutorial rows. Available counts are 75 at each of the four difficulty indexes. The extractor supports arbitrary source chart counts and preserves unavailable rows; the runtime catalog indexes only available rows.
 
 - `songId` comes from `SongData.allSongInfo[].Id.Value`.

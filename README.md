@@ -31,13 +31,15 @@ The primary maintenance-time metadata source is the current local In Falsus inst
 
 The generated contract keeps `songId + difficultyIndex` for save lookup and `chartId` for cross-project identity. Game `Rating` feeds the B50 formula; `LevelSectionIndicator` remains an independent display field. Rhythm Archive is used for read-only comparison and web-ecosystem linking, not as a runtime or correctness dependency. The app and GitHub Pages build do not fetch the game installation or Rhythm Archive.
 
-To refresh local generated data, install the maintenance-only Python dependencies, then run:
+To verify or refresh local generated data, install the maintenance-only Python dependencies, then run:
 
 ```text
 python -m pip install -r scripts/requirements-game-catalog.txt
-npm run catalog:generate -- --game-root <path-to-In-Falsus-installation>
 npm run catalog:check -- --game-root <path-to-In-Falsus-installation>
+npm run catalog:update -- --game-root <path-to-In-Falsus-installation>
 ```
+
+`catalog:check` reads the current installation twice into separate marked directories under `.local/game-catalog/`, compares deterministic songlist/manifest/WebP outputs, then checks the committed snapshot. It does not write generated repository files. `catalog:update` stages and validates the songlist, manifest, and jacket set before replacing the generated outputs; a failed update rolls back the prior snapshot. `catalog:generate` remains an alias for this explicit update operation.
 
 To compare against a local Rhythm Archive Catalog export:
 
@@ -45,7 +47,9 @@ To compare against a local Rhythm Archive Catalog export:
 npm run catalog:diff -- --rhythm-archive-catalog <path-to-rhythm-assets-gallery-v2/catalog/index.json>
 ```
 
-The game installation is never used as an output or cache directory. The extractor writes temporary data only to ignored `.local/game-catalog/` and removes it after the run. On Windows it stops before opening game files when the NTFS Last Access Time policy is enabled, changed since boot, or cannot be verified; it does not change system settings. The browser build does not need Python, UnityPy, Pillow, a game installation, or a Rhythm Archive checkout.
+The game installation is a maintenance-time read-only input. The extractor performs no application-initiated writes to it. Windows may update filesystem metadata such as access time as a consequence of normal reads; that operating-system behavior is outside this guarantee. No output, cache, or temporary file is created in the game directory. Generated-output writes resolve under this project, and unsafe or ambiguous targets fail closed. The browser build does not need Python, UnityPy, Pillow, a game installation, or a Rhythm Archive checkout.
+
+`src/catalog/generated-manifest.json` binds the source fingerprint to the exact `songlist.json` bytes and each generated jacket's SHA-256 and byte count. It contains no timestamp or machine path. Jacket output is 320×320 WebP using the pinned UnityPy/Pillow dependencies, Lanczos center-fit, lossy quality 90, method 6, exact RGBA handling, and stripped EXIF/ICC/XMP metadata. The manifest records UnityPy/Pillow/WebP versions as provenance; `catalog:check` verifies them and byte-for-byte repeatability in the installed environment.
 
 ## Local development
 
@@ -58,7 +62,7 @@ npm run typecheck
 npm run build
 ```
 
-`npm run test:extractor` runs focused Python checks for strict game-data fields and Addressables path resolution. The maintenance-only dependencies are pinned in `scripts/requirements-game-catalog.txt`.
+`npm run test:extractor` runs focused Python checks for source validation, write-path safety, content-only fingerprints, deterministic ordering, WebP output, and Addressables path resolution. The maintenance-only dependencies are pinned in `scripts/requirements-game-catalog.txt`.
 
 The production base path is `/infalsus-b50/`. The GitHub Pages workflow builds a static artifact; it does not need secrets or a backend.
 

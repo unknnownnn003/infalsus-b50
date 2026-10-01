@@ -5,12 +5,12 @@
 Read-only In Falsus installation
   -> `scripts/extract-game-catalog.py` reads Addressables metadata and referenced jacket Materials
   -> `scripts/game-catalog.mjs` validates and normalizes the compact source contract
-  -> `src/catalog/songlist.json` and `public/assets/jackets/*.webp`
+  -> `src/catalog/songlist.json`, `src/catalog/generated-manifest.json`, and `public/assets/jackets/*.webp`
   -> static GitHub Pages build
 
-The extractor reads the current `SongData`, `DynamicStringMapping`, and jacket `Material -> _MainTex -> Texture2D` chain. It decodes only the selected bundles. Texture pixels stay in memory; only 320×320 WebP derivatives are written to the ignored `.local/game-catalog/` scratch directory, then copied to the public asset directory. The scratch directory is cleaned after success or failure. No file is written into the game installation. Chart `.spc` files in `StreamingAssets/sam` are not extracted or decrypted. On Windows, extraction first verifies that automatic NTFS Last Access Time updates are disabled and that the setting has been in force since boot; it refuses if access-time changes are possible or the active state cannot be established. Microsoft documents this as NTFS Last Access Time behavior in [fsutil behavior](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-behavior).
+The extractor reads the current `SongData`, `DynamicStringMapping`, and jacket `Material -> _MainTex -> Texture2D` chain. It decodes only the selected bundles. Texture pixels stay in memory; only 320×320 WebP derivatives are written to marked run directories under ignored `.local/game-catalog/`. `catalog:check` generates two independent runs, compares their canonical songlist, manifest, file set, and jacket bytes, then compares the result with committed outputs. It does not write formal generated files. `catalog:update` stages and validates all outputs before replacing the snapshot, and restores the prior files if a replacement fails. The scratch directory is cleaned after success or failure. The extractor performs no application-initiated writes to the game installation. Windows may update filesystem metadata such as access time as a consequence of normal reads; that behavior is outside this guarantee. Chart `.spc` files in `StreamingAssets/sam` are not extracted or decrypted.
 
-The generated snapshot has no timestamp or machine path. Its fingerprint is computed from the content hashes of the local catalog, settings, metadata bundles, and jacket bundles used by the extractor. When a product version string is unavailable, the data commit and Steam build identifiers remain separate source fields.
+The generated snapshot has no timestamp or machine path. Its source fingerprint is computed from stable logical input names and content hashes for `catalog.bin`, the consumed `m_AddressablesVersion` value, metadata bundles, and jacket bundles. It excludes absolute paths, user names, temporary paths, and filesystem timestamps, so identical input bytes at another install location keep the same fingerprint. Songs are sorted by `songId`; charts are sorted by `difficultyIndex` and `chartId`. JSON uses UTF-8, stable property/array order, two-space indentation, and LF line endings. Jacket encoding pins UnityPy 1.25.0 and Pillow 12.1.1 and fixes Lanczos center-fit, 320×320 dimensions, lossy quality 90, method 6, exact RGBA handling, and metadata stripping. The generated manifest records the source fingerprint, exact songlist digest/size, each jacket digest/size, and UnityPy/Pillow/WebP encoder provenance without a timestamp. When a product version string is unavailable, the data commit and Steam build identifiers remain separate source fields.
 
 Rhythm Archive is read only by the diagnostic comparison command. It can validate the shared identity and metadata, but it does not supply B50 runtime data and is not required to generate, build, or run the site.
 
@@ -29,6 +29,10 @@ Local `.sav` file
 The resolver does not index charts whose source `available` field is false. It does not fabricate absent difficulty rows. A missing jacket affects only the image and uses the existing visual fallback.
 
 The parser, catalog schema/resolver, Rating functions, render-model transformation, Canvas renderer, and UI remain separate modules. Core parsing, calculation, normalization, layout, and text-fit decisions do not depend on browser DOM APIs. Canvas image decoding uses same-origin files under this site's static asset directory; no third-party image host is required.
+
+## Ranking regression scope
+
+Ranking regression expectations bind both the save fixture identity and the catalog/source fingerprint. With the same fixture and catalog snapshot, an algorithm change must not alter B50 ranking without a justified behavior change. A catalog update, chart addition, or recalibration may legitimately change the ranking.
 
 ## Identity and related projects
 

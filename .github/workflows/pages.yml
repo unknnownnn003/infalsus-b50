@@ -43,6 +43,9 @@ jobs:
       - name: Run application tests
         run: npm test
 
+      - name: Install extractor test dependencies
+        run: python -m pip install -r scripts/requirements-game-catalog.txt
+
       - name: Run extractor tests
         run: npm run test:extractor
 

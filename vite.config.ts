@@ -18,7 +18,7 @@ const emitCatalogSnapshots: Plugin = {
 };
 
 export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/infalsus-b50/" : "/",
+  base: command === "build" ? "./" : "/",
   plugins: command === "build" ? [emitCatalogSnapshots] : [],
   test: {
     environment: "node",

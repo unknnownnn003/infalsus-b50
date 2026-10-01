@@ -1,0 +1,148 @@
+name: Publish local-use release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Version tag matching package.json, such as v0.2.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name || github.ref_name }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Install extractor test dependencies
+        run: python -m pip install -r scripts/requirements-game-catalog.txt
+
+      - name: Run extractor tests
+        run: npm run test:extractor
+
+      - name: Verify committed catalog snapshot
+        run: npm run catalog:snapshot:check
+
+      - name: Build static site
+        run: npm run build
+
+      - name: Package portable app
+        run: npm run release:package -- --tag "$RELEASE_TAG"
+
+      - name: Publish GitHub Release and upload package
+        uses: actions/github-script@v9
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const tagName = process.env.RELEASE_TAG;
+            const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            if (tagName !== `v${packageJson.version}`) {
+              throw new Error(`Release tag ${tagName} does not match package.json version ${packageJson.version}.`);
+            }
+
+            const { owner, repo } = context.repo;
+            if (context.eventName === 'workflow_dispatch') {
+              const defaultBranch = context.payload.repository.default_branch;
+              if (context.ref !== `refs/heads/${defaultBranch}`) {
+                throw new Error(`Manual releases must run from the default branch (${defaultBranch}).`);
+              }
+            }
+
+            try {
+              const taggedCommit = await github.rest.repos.getCommit({ owner, repo, ref: tagName });
+              if (taggedCommit.data.sha !== context.sha) {
+                throw new Error(`Tag ${tagName} points to ${taggedCommit.data.sha}, not the workflow commit ${context.sha}.`);
+              }
+            } catch (error) {
+              if (error.status !== 404 || context.eventName !== 'workflow_dispatch') throw error;
+            }
+
+            let release;
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({ owner, repo, tag: tagName });
+              release = existing.data;
+              if (!release.draft) {
+                throw new Error(`Release ${tagName} is already published; refusing to replace its assets.`);
+              }
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              const created = await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: tagName,
+                target_commitish: context.sha,
+                name: `In Falsus B50 ${tagName}`,
+                generate_release_notes: true,
+                draft: true,
+                prerelease: false,
+              });
+              release = created.data;
+            }
+
+            const archiveName = `infalsus-b50-${tagName}.zip`;
+            const assetNames = [archiveName, `${archiveName}.sha256`];
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, {
+              owner,
+              repo,
+              release_id: release.id,
+              per_page: 100,
+            });
+            for (const asset of assets.filter((item) => assetNames.includes(item.name))) {
+              await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id });
+            }
+
+            for (const name of assetNames) {
+              const filePath = path.join('.local', 'release', name);
+              const data = await fs.promises.readFile(filePath);
+              const contentType = name.endsWith('.zip') ? 'application/zip' : 'text/plain';
+              const uploaded = await github.rest.repos.uploadReleaseAsset({
+                owner,
+                repo,
+                release_id: release.id,
+                name,
+                data,
+                headers: {
+                  'content-type': contentType,
+                  'content-length': String(data.byteLength),
+                },
+              });
+              core.info(`Uploaded ${uploaded.data.name}: ${uploaded.data.browser_download_url}`);
+            }
+
+            await github.rest.repos.updateRelease({ owner, repo, release_id: release.id, draft: false });
+            core.info(`Published ${tagName}.`);
